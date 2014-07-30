@@ -187,8 +187,8 @@
 			
 			.image.avatar48
 			{
-				width: 48px;
-				height: 48px;
+				/*width: 48px;
+				height: 48px; */
 				background: #f00;
 			}
 			
@@ -993,7 +993,7 @@
 		
 		#logo .image
 		{
-			position: fixed;
+			position: absolute;
 			left: 0;
 			top: 48px;
 		}
