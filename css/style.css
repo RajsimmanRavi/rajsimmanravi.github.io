@@ -926,7 +926,8 @@
 		color: #fff;
 		/*background: #222729 url('images/overlay.png');*/
 		background: #0F000F url('images/overlay.png');
-		box-shadow: inset -0.25em 0 0.25em 0 rgba(0,0,0,0.125);
+		/*box-shadow: inset -0.25em 0 0.25em 0 rgba(0,0,0,0.125);*/
+		box-shadow: 10px 10px 5px #888888;
 		text-align: right;
 	}
 	
