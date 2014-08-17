@@ -1137,3 +1137,9 @@
 		{
 			background-color: #e8edec;
 		}
+
+		.textAndImage_Block > img 
+		{
+			float: right;
+			margin: 15 px;
+		}
