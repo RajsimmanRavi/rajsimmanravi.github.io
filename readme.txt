@@ -22,8 +22,16 @@ n33.co @n33co dribbble.com/n33
 
 Credits
 
-	Images (Demo Only)
-		Felicia Simion (http://ineedchemicalx.deviantart.com/)
+	Images 
+	
+        Ubuntu Image: http://wallpoper.com/images/00/44/75/16/ubuntu-desktop-11-04_00447516.jpg
+
+        University of Toronto Image: http://www.vrg.utoronto.ca/~ngwt/Photos/ECE_logo.jpg
+
+        Canada Health Infoway Image: https://fbcdn-profile-a.akamaihd.net/hprofile-ak-xaf1/t1.0-1/p160x160/1932214_725494804148246_1147424794_n.jpg
+
+        University of Toronto Logo: http://www.bing.com/images/search?pq=uoft+&sc=8-5&sp=-1&sk=&q=UofT+&qft=+filterui:imagesize-small&FORM=R5IR1#view=detail&id=12A6676AE15B703D98C7B6C87AE5B8F5E36093BE&selectedIndex=0
+
 		
 	Icons
 		Font Awesome (http://fortawesome.github.com/Font-Awesome/)
