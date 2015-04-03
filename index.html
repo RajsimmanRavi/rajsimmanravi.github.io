@@ -1,254 +1,72 @@
-<!DOCTYPE HTML>
-<!--
-	Prologue 1.2 by HTML5 UP
-	html5up.net | @n33co
-	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
--->
-<html>
-	<head>
-		<title>Rajsimman Ravichandiran</title>
-		<meta http-equiv="content-type" content="text/html; charset=utf-8" />
-		<meta name="description" content="" />
-		<meta name="keywords" content="" />
-		<link rel="shortcut icon" href="http://faviconist.com/icons/f34644cd115040a08b6490780fd9e180/favicon.ico" />
-		<link href="http://fonts.googleapis.com/css?family=Source+Sans+Pro:200,300,400,600" rel="stylesheet" type="text/css" />
-		<!--[if lte IE 8]><script src="js/html5shiv.js"></script><![endif]-->
-		<script src="js/jquery.min.js"></script>
-		<script src="js/skel.min.js"></script>
-		<script src="js/skel-panels.min.js"></script>
-		<script src="js/init.js"></script>
-		<noscript>
-			<link rel="stylesheet" href="css/skel-noscript.css" />
-			<link rel="stylesheet" href="css/style.css" />
-			<link rel="stylesheet" href="css/style-wide.css" />
-		</noscript>
-		<!--[if lte IE 9]><link rel="stylesheet" href="css/ie9.css" /><![endif]-->
-		<!--[if lte IE 8]><link rel="stylesheet" href="css/ie8.css" /><![endif]-->
-	</head>
-	<body>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <!-- Used Reference: http://www.codingeverything.com/2014/02/BootstrapDocsSideBar.html -->
+    <title>Word UP!</title>
 
-		<!-- Header -->
-			<div id="header" class="skel-panels-fixed">
+    <!-- Bootstrap -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/bootstrap.css" rel="stylesheet">
+    <link href="font-awesome-4.3.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div id="wrap">
+      <div id="commonHeader"></div>
+      <div class="container bs-docs-container">
+    		<div class="row">
+    			<div class="col-md-9" role="main">
+    				<section id="about">
+    					<div class="row">
+                <div class="col-md-12">
+    						  <h2><i class="fa fa-info-circle"></i> Info Base</h2>
+                </div>
+              </div>
+                <h3>Umm... I still don't have anything yet!</h3>
+                <h3>But, if you want to know more about the creator of this cool website, have a look at the 'About Me' section.</h3>
+      			</section>
+    			</div>
+    			<div class="col-md-3" role="complementary">
+    			</div>
+        </div>
+      </div>
+    </div>
+    <div id="commonFooter"></div>
+    
 
-				<div class="top">
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="js/jquery-2.1.3.min.js"></script>
+    <!--<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>-->
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="js/bootstrap.min.js"></script>
+    <script>
+      $(function(){
+        $('#commonHeader').load("header.html");
+        $('#commonFooter').load("footer.html");
+      });
 
-					<!-- Logo -->
-						<div id="logo">
-							<span class="image avatar48"><img src="images/profile_pic2.jpg" alt="" /></span>
-							<h1 id="title">Rajsimman &nbsp; &nbsp; Ravichandiran</h1>
-							<!--<span class="byline">Electrical Engineer</span> -->
-						</div>
+	    $('body').scrollspy({
+	    target: '.bs-docs-sidebar',
+	    offset: 40
+		});
 
-					<!-- Nav -->
-						<nav id="nav">
-							<!--
-							
-								Prologue's nav expects links in one of two formats:
-								
-								1. Hash link (scrolls to a different section within the page)
-								
-								   <li><a href="#foobar" id="foobar-link" class="skel-panels-ignoreHref"><span class="fa fa-whatever-icon-you-want">Foobar</span></a></li>
-
-								2. Standard link (sends the user to another page/site)
-
-								   <li><a href="http://foobar.tld"><span class="fa fa-whatever-icon-you-want">Foobar</span></a></li>
-							
-							-->
-							<ul>
-								<li><a href="#top" id="top-link" class="skel-panels-ignoreHref"><span class="fa fa-home">About</span></a></li>
-								<li><a href="#education" id="education-link" class="skel-panels-ignoreHref"><span class="fa fa-book">Education</span></a></li>
-								<li><a href="#workExp" id="workExp-link" class="skel-panels-ignoreHref"><span class="fa fa-briefcase">Work Experience</span></a></li>
-								<li><a href="#sideInterests" id="sideInterests-link" class="skel-panels-ignoreHref"><span class="fa fa-th">Side Interests</span></a></li>
-								<li><a href="#contact" id="contact-link" class="skel-panels-ignoreHref"><span class="fa fa-envelope">Contact</span></a></li>
-							</ul>
-						</nav>
-						
-				</div>
-				
-				<div class="bottom">
-
-					<!-- Social Icons -->
-						<ul class="icons">
-							<!--<li><a href="#" class="fa fa-twitter solo"><span>Twitter</span></a></li> -->
-							<!--<li><a href="#" class="fa fa-facebook solo"><span>Facebook</span></a></li> -->
-							<li><a href="https://github.com/RajsimmanRavi" class="fa fa-github solo" target="_blank"><span>Github</span></a></li>
-							<!--<li><a href="#" class="fa fa-dribbble solo"><span>Dribbble</span></a></li> -->
-							<li><a href="mailto:rajsimman.ravi@outlook.com" class="fa fa-envelope solo"><span>Email</span></a></li>
-						</ul>
-				
-				</div>
-			
-			</div>
-
-		<!-- Main -->
-			<div id="main">
-			
-				<!-- About Me -->
-					<section id="top" class="one">
-						<div class="container">
-
-							<a href="http://fc04.deviantart.net/fs70/i/2012/343/d/4/toronto_at_night_black_and_white_edit_by_falcon912-d5nkmrv.jpg" class="image featured"><img src="images/toronto_at_night_black_and_white.jpg" alt="" /></a>
-
-							<header>
-								<h2 class="alt">About</h2>
-							</header>
-							<div class="textAndImage_Block">
-								<p>I am a new graduate from University of Toronto with a major in Electrical Engineering. My areas of specialization are Communications and Networks. My interests also include Software development, Cloud Computing services and Web design and development.</p>
-							</div>
-							<p><a href="RajsimmanRavichandiran_resume.pdf" download="RajsimmanRavichandiran_resume.pdf"class="button"><i class="fa fa-download" style="padding-right:10px;"></i>Download Resume</a></p>
-							<!--<footer>
-								<a href="#projects" class="button scrolly">Projects</a>
-							</footer>-->
-
-						</div>
-					</section>
-					
-				<!-- Education -->
-					<section id="education" class="two">
-						<div class="container">
-					
-							<header>
-								<h2>Education</h2>
-							</header>
-							<h3>University of Toronto</h3>
-							<div class="textAndImage_Block">
-								<img src="images/UofT_logo.jpg" style="box-shadow: 10px 10px 5px #888888;width: 250px;" />
-								<p><i style="padding-right:20px;">Bachelor of Applied Science, Electrical Engineering</i><span>2010-2014</span><br/>
-								Major in Electrical Engineering with 1 year Professional Year Experience (PEY)<br />
-							    Final year GPA: 3.51, Dean’s List
-								</p>
-							</divv>
-						</div>
-					</section>
-
-				<!-- Work Experiences -->
-					<section id="workExp" class="three">
-						<div class="container">
-
-							<header>
-								<h2>Work Experience</h2>
-							</header>
-    						<h4>
-    							<span style="font-weight: bold;">Volunteer Research Assistant (SAVI Network)</span>, University of Toronto
-    							<span style="padding-left:20px;">May 2014 - Present</span>
-    						</h4>
-    						<div class="textAndImage_Block">
-    							<img src="images/SAVI-05.png" style="margin-top:40px; margin-right:5px;" />
-      							<p>Currently, working as a Volunteer Research Assistant under the supervision of Prof. <a href="http://www.nal.utoronto.ca/alg/alg.htm" target="_blank">Leon-Garcia</a> at the University of Toronto on the Smart Applications on Virtual Infrastructure (SAVI) Network Project which adopts the Infrastructure as a Service (Iaas) model to provide experimentation for Future Internet Protocols and Architectures. Focused on extending the Telemetry component of open source cloud computing platform, OpenStack <a href="http://docs.openstack.org/developer/ceilometer/" target="_blank">(Cielometer)</a> to support the services deployed in the Software Defined Infrastructure (SDI) in the testbed. More information about the SAVI project can be found <a href="http://www.savinetwork.ca/" target="_blank">here.</a>
-      							</p>
-
-      						</div>
-    						<h4>
-    							<span style="font-weight: bold;">Software Developer Intern</span>, Canada Health Infoway, Toronto (1 year PEY)
-    							<span style="padding-left:20px;">2012-2013</span>
-    						</h4>
-    						<div class="textAndImage_Block">
-    							<img src="images/CHI_logo_2.jpg" />
-    							<p>Designed and developed front end using Bootstrap framework along with HTML, CSS and JavaScript. Developed backend using PHP and wrote procedures in MySQL database and LDAP directories to process and store data. Performed regression, sanity and cross-browser testing to resolve bugs on web browsers. Provided technical support to clients and co-workers having issues with the system.</p>
-    						</div>
-    						<h4>
-    							<span style="font-weight: bold;">Counsellor</span>, Da Vinci Engineering Enrichment Program (DEEP), University of Toronto
-    							<span style="padding-left:20px;">Summer 2011</span>
-    						</h4>
-    						<div class="textAndImage_Block">
-    							<img src="images/UofT_logo_small.jpg" />
-      							<p>Facilitated student registration for each week during the summer academy. Chaperoned DEEP trips or excursions. Clarified concepts to students in courses such as Introduction to Micro-controllers and Introduction to Electrical Engineering. Guided students during laboratory experiments to help them develop intuition and debugging skills.</p>   										
-  						</div>
-					</section>
-
-				<!-- Side Interests -->
-			    	<section id="sideInterests" class="four">
-			    		<div class="container">
-			    			<header>
-								<h2>Side Interests</h2>
-							</header>
-			    			<h4>Learning Web Applications Architectures</h4>
-			    			<div class="textAndImage_Block">
-			    				<p>Apart from the research, I am currently learning Web Applications Architectures by following the free online course offered at the <a href="https://www.coursera.org/" target="_blank">Coursera</a> website. This course teaches about basic web architectures and using Model-View-Controller (MVC) patterns to build web applications. I am also getting familiarized to Ruby on Rails framework and getting accustomed to using Bitbucket for posting code repositories.</p>
-			    			</div>
-			    			<h4>
-			    				<span class="fa fa-list" style="padding-right:20px;"></span>
-			    				To-Do list (Not necessarily in order)
-			    			</h4>
-			    			<div style="padding-left:50px;">
-			    				<ul>
-			    					<li>
-			    						<span class="fa fa-arrow-circle-right" style="padding-right:15px;"></span>
-			    						HTML5 Game Development
-			    					</li>
-			 						<li>
-			 							<span class="fa fa-arrow-circle-right" style="padding-right:15px;"></span>
-			 							Mobile App Development
-			 						</li>
-			 						<li>
-			 							<span class="fa fa-arrow-circle-right" style="padding-right:15px;"></span>
-			 							Raspberry PI projects
-			 						</li>
-			    					<li>
-			    						<span class="fa fa-arrow-circle-right" style="padding-right:15px;"></span>
-			    						Network Security
-			    					</li>
-			    					<li>
-			    						<span class="fa fa-arrow-circle-right" style="padding-right:15px;"></span>
-			    						Linux Kernel Programming
-			    					</li>
-			    				</ul>
-
-			    		</div>
-
-			    	</section>
-				<!-- Contact -->
-					<section id="contact" class="five">
-						<div class="container">
-
-							<header>
-								<h2>Contact</h2>
-							</header>
-
-							<p>If you have any questions, concerns, or suggestions, you can email me at: <a href="mailto:rajsimman.ravi@outlook.com">rajsimman.ravichandiran@mail.utoronto.ca</a>.<br />
-							<i class="fa fa-linkedin" style="padding-right:20px;"></i><a href="http://ca.linkedin.com/in/rajsimmanravichandiran" target="_blank">linkedin.com/in/rajsimmanravichandiran</a></p>
-							
-							<!--<form method="post" action="#">
-								<div class="row half">
-									<div class="6u"><input type="text" class="text" name="name" placeholder="Name" /></div>
-									<div class="6u"><input type="text" class="text" name="email" placeholder="Email" /></div>
-								</div>
-								<div class="row half">
-									<div class="12u">
-										<textarea name="message" placeholder="Message"></textarea>
-									</div>
-								</div>
-								<div class="row">
-									<div class="12u">
-										<a href="#" class="button submit">Send Message</a>
-									</div>
-								</div>
-							</form>-->
-
-						</div>
-						<!--
-						<div style="padding:50px;">
-							<h5>Favorite Quote</h5>
-    						<i style="font-weight:400;">"This is what I believe to be true. This is what I learned in the hospital. You have to do everything you can, you have to work your hardest, and if you do, if you stay positive, you have a shot at a silver lining."</i><span style="font-weight:400;"> - Pat</span>
-    						<span style="font-weight:600;padding-left:30px;color:#000047;">Silver Linings Playbook</span>
-    					</div>
-    				    -->
-					</section>
-			
-			</div>
-
-		<!-- Footer -->
-			<div id="footer">
-				
-				<!-- Copyright -->
-					<div class="copyright">
-						<!--<p>&copy; 2014 Rajsimman Ravichandiran. All rights reserved.</p>-->
-						<ul class="menu">
-							<li>Design: <a href="http://html5up.net">HTML5 UP</a></li>
-						</ul>
-					</div>
-				
-			</div>
-
-	</body>
+		$('#myAffix').affix({
+		  offset: {
+		    top: 100,
+		    bottom: function () {
+		      return (this.bottom = $('.footer').outerHeight(true))
+		    }
+		  }
+		})
+    </script>
+  </body>
 </html>
