@@ -6635,39 +6635,20 @@ button.close {
       display: block;           
   }
 
-  #headStyle{
-    margin: 0px;
-    background-color: #C7EC42;
-    border-bottom: 1px solid #9CB934;
-  }
-  
+   
   #header {
     font-family: Georgia, serif;
-    text-shadow: 2px 2px 0px #C7EC42, 8px 4px 0px rgba(0,0,0,0.15);
-
+    /*text-shadow: 2px 2px 0px #C7EC42, 8px 4px 0px rgba(0,0,0,0.15);*/
+    text-shadow: 2px 2px 0px #C7EC42;
   }
-
-  #barStyle{
-    background-color: #B1D23B;   
+  
+  #headStyle{
+    margin: 0px;
+    /*background-color: #C7EC42;*/
+    border-bottom: 1px solid #9CB934;
   }
 
   #footer{
     margin-top: 50px;
     background-color: #B1D23B;
   }
-
-  #ourIcon{
-    font-size: 100px;
-
-  }
-
- #icon-carousel{
-    position: absolute;
-    top: 100px;
-    background-image: none;
-
- }
-
- #carousel-text{
-    font-family: Georgia, serif;
- }
