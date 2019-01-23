@@ -241,3 +241,23 @@ html, body {
 .mdl-demo .mdl-menu__container {
   z-index: 99;
 }
+
+/* For cards */
+
+.demo-card-wide.mdl-card {
+  width: 550px;
+}
+.demo-card-wide > .mdl-card__title {
+  color: #fff;
+  height: 200px;
+  background: url('images/SAVI_twitter.jpg') center / cover;
+}
+.demo-card-wide > .mdl-card__menu {
+  color: #fff;
+}
+
+.demo-card-wide > .mdl-card__title_2 {
+  color: #fff;
+  height: 200px;
+  background: url('images/NSERC_create.jpg') center / cover;
+}
