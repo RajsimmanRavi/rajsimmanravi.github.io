@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <!-- Used Reference: http://www.codingeverything.com/2014/02/BootstrapDocsSideBar.html -->
+    <title>My Personal Site</title>
+
+    <!-- Bootstrap -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/bootstrap.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/blocksjs.css">
+    <link href="font-awesome-4.3.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+
+    <div class="BlocksGame"></div>
+    <script src="js/blockjs_js/block.js">
+     (function(){ 
+      var game = BLOCKS.game({
+        width: 800,
+        height: 600
+      });
+
+      var background = BLOCKS.slice({
+        src: "images/sweet-drop-bg.png"
+      }) 
+
+      background.layer = game.layers[0]; // let background render on bottom layer
+      game.stage.addView(background);   //  add slice to game stage 
+
+      // create dropPopsicle function
+      var dropPopsicle = function(){
+
+        var popsicle = BLOCKS.block({
+          slices: [{
+            name: "falling",
+            src: "images/creamsicle.png"
+          },{
+            name: "crashed",
+            src: "images/creamsicle-broken.png"
+          }]
+        });
+
+        popsicle.layer = game.layers[2]; // let popsicle render above background 
+        game.stage.addView(popsicle);    // add popsicle to game stage 
+
+        // randomize the drop position everytime and adjust the width, so popsicle 
+        // does not run outside the background width
+        popsicle.x = Math.random() * (game.width - popsicle.width); 
+        popsicle.y = -popsicle.height;
+
+        // Main function that animates the drop popsicle
+        game.addMotor("y", {
+          object: popsicle,
+          duration: 3000,           // 3 secs
+          amount: game.height -20,  // height of popsicle falling (dont' want to crash at edge of the screen)
+          easing: "easeIn",         // roughly estimates gravity
+
+          // This callback function is invoked when the falling popsicle action is completed
+          callback: function(){
+            popsicle.setSlice("crashed");
+            game.addTicker(melt, 2000);  // removes crashed popsicle from screen
+          }
+        });
+
+        var melt = function(){
+
+          game.addMotor("alpha", {
+            object: popsicle,
+            duration: 800,
+            amount: -1,
+            easing: "easeIn",
+            callback: function(){
+              game.stage.removeView(popsicle);
+              popsicle.destroy();
+              popsicle = null;
+            }
+          });
+
+          game.addMotor("y",{
+            object: popsicle,
+            duration: 1000,
+            amount: popsicle.height;
+            easing: "easeIn"
+          });
+
+          popsicle.cropHeight = popsicle.height;
+          game.addMotor("cropHeight",{
+            object: popsicle,
+            duration: 1000,
+            amount: -popsicle.height;
+            easing: "easeIn"
+          });
+
+        }
+
+      }
+
+      dropPopsicle();
+
+      game.addTicker(dropPopsicle, 500);
+
+    });
+    </script>
+  </body>
+</html>
+

@@ -1,0 +1,8 @@
+- name: About
+  link: /
+- name: Work
+  link: /work/
+- name: academia
+  link: /academia/
+- name: Blog
+  link: /blog/

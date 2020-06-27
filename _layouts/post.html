@@ -1,0 +1,15 @@
+---
+layout: default
+---
+<div class="mdl-cell mdl-cell--12-col mdl-card mdl-shadow--4dp">
+    <div class="mdl-card__title text-card-top">
+        <div class="text-card-title">{{ page.title }}</div>
+        <div class="subtext clear-card-subtext color-white">{{ page.date | date: '%d %B %Y' }}</div>
+    </div>
+
+    <div class="mdl-cell mdl-cell--12-col mdl-card__supporting-text">
+        <div class="mdl-cell portfolio-description">
+            {{ page.content }}
+        </div>
+    </div>
+</div>

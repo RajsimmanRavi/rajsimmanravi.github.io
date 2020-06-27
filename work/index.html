@@ -1,0 +1,51 @@
+---
+layout: default
+---
+<div class="mdl-cell mdl-cell--12-col mdl-card mdl-shadow--4dp">
+    <div class="mdl-card__title">
+        <div class="card-title">Skills</div>
+    </div>
+    <div class="mdl-grid mdl-card__supporting-text">
+        <div class="mdl-cell mdl-cell--4-col">
+            <div class="emphasize">Programming</div>
+        </div>
+        <div class="mdl-cell mdl-cell--8-col">
+            <div class="subtext">Python, Golang, C, Shell Scripting, SQL, HTML, JavaScript, CSS</div>
+        </div>
+
+        <div class="mdl-cell mdl-cell--4-col">
+            <div class="emphasize">Operating Systems</div>
+        </div>
+        <div class="mdl-cell mdl-cell--8-col">
+            <div class="subtext">Linux (Ubuntu, RedHat, Kali) and Windows</div>
+        </div>
+
+        <div class="mdl-cell mdl-cell--4-col">
+            <div class="emphasize">Applications</div>
+        </div>
+        <div class="mdl-cell mdl-cell--8-col">
+            <div class="subtext">K8S, Docker, EC2, Terraform, OpenStack,
+              Google App Engine, Elasticsearch, Kafka, Kibana, Splunk
+            </div>
+        </div>
+        <div class="mdl-cell mdl-cell--4-col">
+            <div class="emphasize">Tools</div>
+        </div>
+        <div class="mdl-cell mdl-cell--8-col">
+            <div class="subtext">Git, Jira, Confluence, NGINX, Matlab,
+              WireShark, BigQuery, Scikit-learn, Keras</div>
+        </div>
+    </div>
+</div>
+
+{% assign posts = site.work | sort: 'order' %}
+{% for post in posts %}
+<div class="mdl-cell mdl-cell--12-col mdl-card mdl-shadow--4dp">
+    <div class="mdl-card__title">
+        <div class="card-title">{{ post.title}} - {{ post.company }} ({{ post.display_date }})</div>
+    </div>
+    <div class="mdl-grid mdl-card__supporting-text">
+            {% include work_post.html %}
+    </div>
+</div>
+{% endfor %}

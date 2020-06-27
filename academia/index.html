@@ -1,0 +1,64 @@
+---
+layout: default
+---
+{% assign posts = site.academia | sort: 'order' %}
+<div class="mdl-cell mdl-cell--12-col mdl-card mdl-shadow--4dp">
+    <div class="mdl-card__title text-card-top mdl-color--accent">
+        <div class="text-card-title">Education</div>
+    </div>
+    <div class="mdl-grid mdl-card__supporting-text">
+        {% for post in posts %}
+            {% include academia_post.html %}
+        {% endfor %}
+    </div>
+</div>
+
+<div class="mdl-cell mdl-cell--12-col mdl-card mdl-shadow--4dp">
+    <div class="mdl-card__title text-card-top mdl-color--accent">
+        <div class="text-card-title">Published Research Papers</div>
+        <!-- <div class="subtext clear-card-subtext">{{ post.date | date: '%d %B %Y' }}</div> -->
+    </div>
+
+    <div class="mdl-grid mdl-card__supporting-text">
+        <div class="portfolio-description">
+          <ul class="demo-list-two mdl-list">
+            <li class="mdl-list__item mdl-list__item--two-line">
+              <span class="mdl-list__item-primary-content">
+                <i class="fas fa-scroll"></i>
+                <a href="/assets/files/CNSM_Public.pdf" target="_blank">EDoS Mitigation for Autonomic Management on Multi-Tier IoT</a>
+                <span class="mdl-list__item-sub-title">Utilize Hierarchical Temporal Memory for anomaly detection on autoscaling solutions</span>
+              </span>
+              <span class="mdl-list__item-secondary-content">
+                <span class="mdl-list__item-secondary-info">Main Author</span>
+                <a class="mdl-list__item-secondary-action" href="#"><i class="material-icons">star</i></a>
+              </span>
+            </li>
+            <li class="mdl-list__item mdl-list__item--two-line">
+              <span class="mdl-list__item-primary-content">
+                <i class="fas fa-scroll"></i>
+                <a href="/assets/files/NetSoft_Public.pdf" target="_blank">Anomaly Detection using Resource Behaviour Analysis for Autoscaling systems</a>
+                <span class="mdl-list__item-sub-title">Utilize Auto-regressive statistical techniques for anomaly detection on autoscaling solutions</span>
+              </span>
+              <span class="mdl-list__item-secondary-content">
+                <span class="mdl-list__item-secondary-info">Main Author</span>
+                <a class="mdl-list__item-secondary-action" href="#"><i class="material-icons">star</i></a>
+              </span>
+            </li>
+            <li class="mdl-list__item mdl-list__item--two-line">
+              <span class="mdl-list__item-primary-content">
+                <i class="fas fa-scroll"></i>
+                <a href="https://arxiv.org/pdf/1711.03204.pdf" target="_blank">Elascale: autoscaling and monitoring as a service</a>
+                <span class="mdl-list__item-sub-title">Proposed autoscaling solution for both microservices and VMs</span>
+              </span>
+            </li>
+            <li class="mdl-list__item mdl-list__item--two-line">
+              <span class="mdl-list__item-primary-content">
+                <i class="fas fa-scroll"></i>
+                <a href="/assets/files/MonArch_Public.pdf" target="_blank">Monitoring and Measurement in Software-Defined Infrastructure</a>
+                <span class="mdl-list__item-sub-title">Proposed novel monitoring architecture for cloud infrastructure</span>
+              </span>
+            </li>
+          </ul>
+        </div>
+    </div>
+</div>
