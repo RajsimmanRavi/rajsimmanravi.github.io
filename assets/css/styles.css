@@ -1,5 +1,6 @@
 body, h1, h2, h3, h4, h5, h6 {
-    font-family: 'Roboto', sans-serif;
+    /* font-family: 'Roboto', sans-serif; */
+    font-family: 'Roboto';
 }
 
 /*--------------- Layout ---------------*/
@@ -108,7 +109,8 @@ footer {
 .mdl-card__supporting-text {
     display: flex;
     flex-grow: 1;
-    color: rgb(63,81,181);
+    /* color: rgb(63,81,181); */
+    color: #424242;
 }
 
 .portfolio-description {
@@ -331,5 +333,5 @@ img.article-image {
 
 .demo-card-wide > .mdl-card__title_2 {
   height: 200px;
-  background: url('../images/NSERC_Create.jpg') center / cover;
+  background: url('../images/NSERC_create.jpg') center / cover;
 }
