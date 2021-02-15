@@ -1,2 +1,13 @@
 _site/
 .jekyll-cache/
+# hidden files
+.*
+!.github
+
+# jekyll cache
+vendor
+
+# rubygem
+*.gem
+# yard docs
+doc
