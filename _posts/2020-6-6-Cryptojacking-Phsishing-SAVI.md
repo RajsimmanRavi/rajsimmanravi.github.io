@@ -207,7 +207,7 @@ We realize there are potentially 2 (common) ways to attacking this server: eithe
 
 Upon visiting the subdomain site’s main page https://subdomain.website.ca, when inspecting the elements on the HTML page of the site, we found a hidden javascript tag code that has a suspicious link.
 
-[<img src="{{ site.baseurl }}/assets/images/suspicious_script.png" alt="Suscpicious Script" style="width: 800px;"/>]({{ site.baseurl }}/)
+[<img src="{{ site.baseurl }}/assets/img/suspicious_script.png" alt="Suscpicious Script" style="width: 800px;"/>]({{ site.baseurl }}/)
 
 Just like any (in)sane person would do, we downloaded the file and take a look:
 

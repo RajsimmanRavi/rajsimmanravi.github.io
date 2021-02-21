@@ -17,12 +17,10 @@ timezone: America/Toronto
 # --------------------------
 title: R4J                          # the main title
 
-# tagline: Something to think about   # it will display as the sub-title
+tagline: My personal site   # it will display as the sub-title
 
 description: >-                        # used by seo meta and the atom feed
-  A minimal, portfolio, sidebar,
-  bootstrap Jekyll theme with responsive web design
-  and focuses on text presentation.
+  R4J Personal site
 
 # fill in the protocol & hostname for your site, e.g., 'https://username.github.io'
 url: 'https://rajsimmanravi.github.io'
@@ -77,7 +75,7 @@ theme_mode: dark
 img_cdn: ''
 
 # the avatar on sidebar, support local or CORS resources
-avatar: /assets/images/r4j.png
+avatar: /assets/img/r4j.png
 
 # boolean type, the global switch for ToC in posts.
 toc: true

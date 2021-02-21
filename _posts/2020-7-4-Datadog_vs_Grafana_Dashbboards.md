@@ -33,17 +33,17 @@ For the usecase going forward for summaries, we'll use **am_request_count** metr
 
 The graph shown below is for the **Last 15 minutes** of the **Request Count** for **/healthz** endpoint. As you can see, the value is almost-flat at **55** - **56** req/sec.  An important note about a Grafana dashboard is that the smallest granularity (or shortest interval) between data points is **30** seconds if the time period (highlighted in yellow box on the first screenshot below) is small enough from  **Last 5 mins** till **Last 3 hours**. After that, it becomes 1 min, 2min, 4min etc. for longer time periods (**Last 6 hours, Last 12 hours,...**).
 
-As shown on the [here](/assets/images/grafanaGraph.png){:target="_blank"} (highlighted in red box), the Prometheus query is: `am_request_count:sum(endpoint=~"$endpoint")`. From looking at the [Prometheus dashboard](/assets/images/prometheusGraph.png){:target="_blank"}, we can confirm the value stays within 55-56.
+As shown on the [here](/assets/img/grafanaGraph.png){:target="_blank"} (highlighted in red box), the Prometheus query is: `am_request_count:sum(endpoint=~"$endpoint")`. From looking at the [Prometheus dashboard](/assets/img/prometheusGraph.png){:target="_blank"}, we can confirm the value stays within 55-56.
 
 #### DataDog Dashboard for Request Count for /healthz endpoint
 
-Now we replicate the same Grafana dashboard on [DataDog](/assets/images/DDGraph.png){:target="_blank"}. As you can see, the values are widely different (values fluctuate around 25-30). Why?
+Now we replicate the same Grafana dashboard on [DataDog](/assets/img/DDGraph.png){:target="_blank"}. As you can see, the values are widely different (values fluctuate around 25-30). Why?
 
 **Main cause of discrepancy: Data interval granularity**
 
 Datadog's granularity is **5 secs** (as opposed to **30 secs** in Grafana) for the **Past 15 Minutes**. Also, Datadog's interval increases as the time period widens (same as Grafana). The main reason is that Datadog has a restriction of maximum 300 datapoints in the graph (regardless of the time period). Thus, as the time frame widens, each data point will represent more and more of an aggregated value (and vice versa if time period is shortened).
 
-Therefore, not much aggregation happens for **Past 15 minutes** time period in DataDog. Now, if we aggregate to 30 secs, the graph look similar to Grafana as shown [here](/assets/images/GrafanaAggGraph.png){:target="_blank"}.
+Therefore, not much aggregation happens for **Past 15 minutes** time period in DataDog. Now, if we aggregate to 30 secs, the graph look similar to Grafana as shown [here](/assets/img/GrafanaAggGraph.png){:target="_blank"}.
 
 ### Conclusion
 Grafana does a lot of aggregation compared to Datadog. For more information regarding data aggregation in DataDog, please refer [here](https://docs.datadoghq.com/dashboards/querying/#rollup-to-aggregate-over-time){:target="_blank"}.
@@ -84,6 +84,6 @@ For detailed explanation of how histograms work, please refer to [histogram-work
 
 #### Grafana Dashboard for AM Request Latency for /healthz endpoint
 
-![/assets/images/Untitled%204.png](/assets/images/Untitled%204.png)
+![/assets/img/Untitled%204.png](/assets/img/Untitled%204.png)
 
 Here you can see that the `p99` latency is under 5ms -->
