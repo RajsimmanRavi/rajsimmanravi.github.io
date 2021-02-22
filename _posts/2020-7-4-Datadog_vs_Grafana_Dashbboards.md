@@ -43,7 +43,7 @@ Now we replicate the same Grafana dashboard on [DataDog](/assets/img/DDGraph.png
 
 Datadog's granularity is **5 secs** (as opposed to **30 secs** in Grafana) for the **Past 15 Minutes**. Also, Datadog's interval increases as the time period widens (same as Grafana). The main reason is that Datadog has a restriction of maximum 300 datapoints in the graph (regardless of the time period). Thus, as the time frame widens, each data point will represent more and more of an aggregated value (and vice versa if time period is shortened).
 
-Therefore, not much aggregation happens for **Past 15 minutes** time period in DataDog. Now, if we aggregate to 30 secs, the graph look similar to Grafana as shown [here](/assets/img/GrafanaAggGraph.png){:target="_blank"}.
+Therefore, not much aggregation happens for **Past 15 minutes** time period in DataDog. Now, if we aggregate to 30 secs, the graph look similar to Grafana as shown [here](/assets/img/grafanaAggGraph.png){:target="_blank"}.
 
 ### Conclusion
 Grafana does a lot of aggregation compared to Datadog. For more information regarding data aggregation in DataDog, please refer [here](https://docs.datadoghq.com/dashboards/querying/#rollup-to-aggregate-over-time){:target="_blank"}.
