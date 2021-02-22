@@ -1,4 +1,4 @@
-My personal website using [Jekyll-now](https://github.com/jekyll/jekyll/). I use [Chirpy](https://github.com/cotes2020/jekyll-theme-chirpy) theme for my site.  
+My personal website using [Jekyll-now](https://github.com/jekyll/jekyll/). I use [Chirpy](https://github.com/cotes2020/jekyll-theme-chirpy) theme for my site.  [Live Here](https://rajsimmanravi.github.io)
 
 ### Development Notes
 
