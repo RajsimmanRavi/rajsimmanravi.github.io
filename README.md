@@ -1,9 +1,3 @@
-My personal website using [Jekyll-now](https://github.com/jekyll/jekyll/). I use [Chirpy](https://github.com/cotes2020/jekyll-theme-chirpy) theme for my site.  
+My personal website using [Hugo](https://gohugo.io/). I'm using the [Stack theme](https://stack.jimmycai.com/)
 
-### Development Notes
-
-To run locally, you need `ruby 2.7.1` version. Newer versions do not work with certain plugins. Make sure you're in the main directory in this repo.
-
-* Command to clean cached/old objects when changing CSS objects: `bundle exec jekyll clean`
-
-* Command to run the server: `bundle exec jekyll serve`
+My previous version was using Jekyll, but I hated installing random npm modules and dependencies to get it up and running. Also, I'm biased towards Golang, hence making the switch :smile
