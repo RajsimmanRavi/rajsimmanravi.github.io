@@ -4,5 +4,6 @@ title = 'R4J'
 theme = 'hugo-theme-stack'
 enableEmoji = true
 
+
 [imageProcessing.cover]
 enabled = true
