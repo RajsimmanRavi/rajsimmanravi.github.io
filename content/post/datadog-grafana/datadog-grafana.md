@@ -59,7 +59,7 @@ From looking at the Prometheus dashboard above, we can confirm the value stays w
 
 Now we replicate the same Grafana dashboard: 
 
-![DataDog](/post/datadog-grafana/ddGraph.png)
+![DataDog](/post/datadog-grafana/ddgraph.png)
 
 As you can see, the values are widely different (values fluctuate around 25-30). Why?
 

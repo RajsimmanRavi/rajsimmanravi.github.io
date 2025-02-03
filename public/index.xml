@@ -104,7 +104,7 @@
 &lt;p&gt;From looking at the Prometheus dashboard above, we can confirm the value stays within 55-56.&lt;/p&gt;
 &lt;h2 id=&#34;datadog-dashboard-for-request-count-for-healthz-endpoint&#34;&gt;DataDog Dashboard for Request Count for /healthz endpoint
 &lt;/h2&gt;&lt;p&gt;Now we replicate the same Grafana dashboard:&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;http://localhost:1313/post/datadog-grafana/ddGraph.png&#34;
+&lt;p&gt;&lt;img src=&#34;http://localhost:1313/post/datadog-grafana/ddgraph.png&#34;
 	
 	
 	
