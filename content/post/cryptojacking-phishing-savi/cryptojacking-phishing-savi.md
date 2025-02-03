@@ -1,6 +1,6 @@
 ---
 date: '2020-06-06T17:50:51-05:00'
-draft: true
+draft: false
 title: 'Uncovering Cryptojacking/Phishing At University of Toronto'
 image: post/cryptojacking-phishing-savi/unsplash-coding.jpg
 tags: 
