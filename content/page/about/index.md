@@ -1,5 +1,5 @@
 ---
-title: About
+title: "👋 About"
 # description: About me
 date: '2025-01-31'
 aliases:
