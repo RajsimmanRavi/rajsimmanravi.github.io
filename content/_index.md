@@ -1,20 +1,4 @@
-A minimal, $\LaTeX$-style hugo theme for personal blogging.
-Visit the [wiki](https://github.com/michaelneuper/hugo-texify3/wiki) for information on how to install and configure.
-
----
-
-## Features
-
-- Any comment engine (giscus, remark42, hyvor, etc.)
-- [Mermaid](https://mermaid.js.org) support
-- DuckDuckGo search
-- Buymeacoffee widget
-- Auto numbered subtitles
-- [Disqus](https://disqus.com/) & Google Analytics
-- Render math equations with [KaTeX](https://katex.org/)
-- [PostCSS](https://postcss.org/) to make writing CSS easier
-- Dark mode toggle
-- Citations
+Welcome to my personal site. This page will host my personal blog. Topics include my interests such as any technical work in the Cloud space, personal finances, something new I learnt recently, spirituality, personal hot takes on issues, whatever that comes on mind etc.  
 
 ---
 

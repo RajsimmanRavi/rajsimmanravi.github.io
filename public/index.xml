@@ -2,16 +2,16 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>R4J&#39;s Personal Site</title>
-    <link>http://localhost:1313/</link>
+    <link>https://rajsimmanravi.github.io/</link>
     <description>Recent content on R4J&#39;s Personal Site</description>
     <generator>Hugo -- gohugo.io</generator>
-    <language>en</language><atom:link href="http://localhost:1313/index.xml" rel="self" type="application/rss+xml" />
+    <language>en</language><atom:link href="https://rajsimmanravi.github.io/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Datadog vs Grafana Dashboards</title>
-      <link>http://localhost:1313/posts/datadog/datadog-grafana/</link>
+      <link>https://rajsimmanravi.github.io/posts/datadog/datadog-grafana/</link>
       <pubDate>Sat, 04 Jul 2020 12:45:43 -0500</pubDate>
       
-      <guid>http://localhost:1313/posts/datadog/datadog-grafana/</guid>
+      <guid>https://rajsimmanravi.github.io/posts/datadog/datadog-grafana/</guid>
       <description>&lt;p&gt;When comparing dashboards between Datadog and Grafana, we often find discrepancies between them. Even though both Datadog and Grafana scrape metrics from the same source, we see vastly differing visualizations and we often wonder which has a better accuracy compared to the source of truth. In this blog post, we explore the discrepancies between Grafana and DataDog dashboards and how we can resolve/understand them. We begin by giving a brief overview on the data (or metrics) being collected.&lt;/p&gt;
 &lt;h2 id=&#34;openmetrics&#34;&gt;Openmetrics&lt;/h2&gt;
 &lt;p&gt;Openmetrics is the standard for collecting metrics. It supports text format representation that allows applications and infrastructure resources to post text-based metrics on an endpoint (eg. https://xxx:8080/metrics) and allow agents to scrape (collect) metrics from that webpage. An example of the text-format metrics is shown here: &lt;strong&gt;&lt;a href=&#34;https://prometheus.io/docs/instrumenting/exposition_formats/#text-based-format&#34;&gt;https://prometheus.io/docs/instrumenting/exposition_formats/#text-based-format&lt;/a&gt;&lt;/strong&gt;.&lt;/p&gt;
@@ -44,16 +44,16 @@
 &lt;p&gt;The graph shown below is for the &lt;strong&gt;Last 15 minutes&lt;/strong&gt; of the &lt;strong&gt;Request Count&lt;/strong&gt; for &lt;strong&gt;/healthz&lt;/strong&gt; endpoint. As you can see, the value is almost-flat at &lt;strong&gt;55&lt;/strong&gt; - &lt;strong&gt;56&lt;/strong&gt; req/sec.  An important note about a Grafana dashboard is that the smallest granularity (or shortest interval) between data points is &lt;strong&gt;30&lt;/strong&gt; seconds if the time period (highlighted in yellow box on the first screenshot below) is small enough from  &lt;strong&gt;Last 5 mins&lt;/strong&gt; till &lt;strong&gt;Last 3 hours&lt;/strong&gt;. After that, it becomes 1 min, 2min, 4min etc. for longer time periods (&lt;strong&gt;Last 6 hours, Last 12 hours,&amp;hellip;&lt;/strong&gt;).&lt;/p&gt;
 &lt;p&gt;&lt;img src=&#34;post/datadog-grafana/grafanaGraph.png&#34; alt=&#34;grafana_graph&#34;&gt;&lt;/p&gt;
 &lt;p&gt;The Prometheus query is: &lt;code&gt;am_request_count:sum(endpoint=~&amp;quot;$endpoint&amp;quot;)&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;http://localhost:1313/post/datadog-grafana/prometheusGraph.png&#34; alt=&#34;Prometheus dashboard&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://rajsimmanravi.github.io/post/datadog-grafana/prometheusGraph.png&#34; alt=&#34;Prometheus dashboard&#34;&gt;&lt;/p&gt;
 &lt;p&gt;From looking at the Prometheus dashboard above, we can confirm the value stays within 55-56.&lt;/p&gt;
 &lt;h2 id=&#34;datadog-dashboard-for-request-count-for-healthz-endpoint&#34;&gt;DataDog Dashboard for Request Count for /healthz endpoint&lt;/h2&gt;
 &lt;p&gt;Now we replicate the same Grafana dashboard:&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;http://localhost:1313/post/datadog-grafana/ddgraph.png&#34; alt=&#34;DataDog&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://rajsimmanravi.github.io/post/datadog-grafana/ddgraph.png&#34; alt=&#34;DataDog&#34;&gt;&lt;/p&gt;
 &lt;p&gt;As you can see, the values are widely different (values fluctuate around 25-30). Why?&lt;/p&gt;
-&lt;h3 id=&#34;main-cause-of-discrepancy-data-interval-granularity&#34;&gt;Main cause of discrepancy: Data Interval Granularity&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;Main cause of discrepancy: Data Interval Granularity&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;Datadog&amp;rsquo;s granularity is &lt;strong&gt;5 secs&lt;/strong&gt; (as opposed to &lt;strong&gt;30 secs&lt;/strong&gt; in Grafana) for the &lt;strong&gt;Past 15 Minutes&lt;/strong&gt;. Also, Datadog&amp;rsquo;s interval increases as the time period widens (same as Grafana). The main reason is that Datadog has a restriction of maximum &lt;code&gt;300 datapoints&lt;/code&gt; in the graph (regardless of the time period). Thus, as the time frame widens, each data point will represent more and more of an aggregated value (and vice versa if time period is shortened).&lt;/p&gt;
 &lt;p&gt;Therefore, not much aggregation happens for &lt;strong&gt;Past 15 minutes&lt;/strong&gt; time period in DataDog. Now, if we aggregate to 30 secs, the graph look similar to Grafana as shown below:&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;http://localhost:1313/post/datadog-grafana/grafanaAggGraph.png&#34; alt=&#34;grafanaAggGraph&#34;&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://rajsimmanravi.github.io/post/datadog-grafana/grafanaAggGraph.png&#34; alt=&#34;grafanaAggGraph&#34;&gt;.&lt;/p&gt;
 &lt;h2 id=&#34;conclusion&#34;&gt;Conclusion&lt;/h2&gt;
 &lt;p&gt;Grafana does a lot of aggregation compared to Datadog. For more information regarding data aggregation in DataDog, please refer to: &lt;strong&gt;&lt;a href=&#34;https://docs.datadoghq.com/dashboards/querying/#rollup-to-aggregate-over-time&#34;&gt;https://docs.datadoghq.com/dashboards/querying/#rollup-to-aggregate-over-time&lt;/a&gt;&lt;/strong&gt;.&lt;/p&gt;
 </description>
@@ -61,10 +61,10 @@
     
     <item>
       <title>Uncovering Cryptojacking/Phishing At University of Toronto</title>
-      <link>http://localhost:1313/posts/crytojacking/cryptojacking-phishing-savi/</link>
+      <link>https://rajsimmanravi.github.io/posts/crytojacking/cryptojacking-phishing-savi/</link>
       <pubDate>Sat, 06 Jun 2020 17:50:51 -0500</pubDate>
       
-      <guid>http://localhost:1313/posts/crytojacking/cryptojacking-phishing-savi/</guid>
+      <guid>https://rajsimmanravi.github.io/posts/crytojacking/cryptojacking-phishing-savi/</guid>
       <description>&lt;p&gt;During my Masters work at University of Toronto (U of T), my research group was responsible for building and maintaining an OpenStack-based Cloud infrastructure such that other research teams from various universities can utilize this Cloud platform. One of the interesting things I worked on was the security aspects of the platform; mainly playing with installing Fail2ban, OSSEC and investigating security threats/issues on the platform. There was one instance we got an alert from the main U of T Security team that there was a backdoor Command-and-Control traffic running on a VM that was on our platform. The VM was hosting a Wordpress-based web-server. This blog is about how I investigated this issue on our platform.&lt;/p&gt;
 &lt;p&gt;&amp;#x26a1; &lt;strong&gt;Note that for privacy concerns, I removed the actual website domain and removed some parts of the public IP addresses.&lt;/strong&gt;&lt;/p&gt;
 &lt;h2 id=&#34;network-analysis&#34;&gt;Network Analysis&lt;/h2&gt;
@@ -397,8 +397,8 @@ if(_0x17a8x4[_0x17e1[4]]){
 &lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;It looked like they tried to delete their spamming email domains: &lt;a href=&#34;https://www.pozzo-balbi.com/help/List_of_email_spamming_domains&#34;&gt;https://www.pozzo-balbi.com/help/List_of_email_spamming_domains&lt;/a&gt;&lt;/p&gt;
 &lt;h4 id=&#34;confetti_ball-now-the-webshell-irc-connections-and-phishing-activities-stopped-confetti_ball&#34;&gt;&amp;#x1f38a; Now, the webshell IRC connections and phishing activities stopped! &amp;#x1f38a;&lt;/h4&gt;
 &lt;h2 id=&#34;conclusion&#34;&gt;Conclusion&lt;/h2&gt;
-&lt;h3 id=&#34;bangbang-main-cause-bangbang--the-current-drupal-version-running-on-the-webserver-has-a-vulnerability-for-xss-attacks-this-was-confirmed-with-grabber-vulnerability-scanner-tool&#34;&gt;&amp;#x203c;&amp;#xfe0f; MAIN CAUSE &amp;#x203c;&amp;#xfe0f; : The current Drupal version (running on the webserver) has a vulnerability for XSS attacks. This was confirmed with grabber vulnerability scanner tool.&lt;/h3&gt;
-&lt;h3 id=&#34;white_check_mark-solution-white_check_mark--patch-systems-regularly-and-keep-an-eye-out-for-vulnerabilities-we-can-install-host-based-andor-network-based-intrusion-detection-systems-for-good-measure&#34;&gt;&amp;#x2705; SOLUTION &amp;#x2705; : Patch systems regularly and keep an eye out for vulnerabilities. We can install Host-based and/or Network-based Intrusion Detection Systems for good measure.&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;&amp;#x203c;&amp;#xfe0f; MAIN CAUSE &amp;#x203c;&amp;#xfe0f; : The current Drupal version (running on the webserver) has a vulnerability for XSS attacks. This was confirmed with grabber vulnerability scanner tool.&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;&amp;#x2705; SOLUTION &amp;#x2705; : Patch systems regularly and keep an eye out for vulnerabilities. We can install Host-based and/or Network-based Intrusion Detection Systems for good measure&lt;/strong&gt;&lt;/p&gt;
 &lt;h3 id=&#34;cleaning-up&#34;&gt;Cleaning Up&lt;/h3&gt;
 &lt;p&gt;Since we were not using the subdomain site, I simply shut it down:&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-console&#34; data-lang=&#34;console&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;$vim /etc/apache2/sites-available/default-ssl.conf

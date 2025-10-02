@@ -410,9 +410,9 @@ It looked like they tried to delete their spamming email domains: https://www.po
 
 ## Conclusion
 
-### :bangbang: MAIN CAUSE :bangbang: : The current Drupal version (running on the webserver) has a vulnerability for XSS attacks. This was confirmed with grabber vulnerability scanner tool.
+**:bangbang: MAIN CAUSE :bangbang: : The current Drupal version (running on the webserver) has a vulnerability for XSS attacks. This was confirmed with grabber vulnerability scanner tool.**
 
-### :white_check_mark: SOLUTION :white_check_mark: : Patch systems regularly and keep an eye out for vulnerabilities. We can install Host-based and/or Network-based Intrusion Detection Systems for good measure.
+**:white_check_mark: SOLUTION :white_check_mark: : Patch systems regularly and keep an eye out for vulnerabilities. We can install Host-based and/or Network-based Intrusion Detection Systems for good measure**
 
 ### Cleaning Up
 
