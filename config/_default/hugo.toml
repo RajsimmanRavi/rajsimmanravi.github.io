@@ -67,22 +67,14 @@ numberedSubtitles = true
 
   [params.commentEngine]
   code = """
-  <script src="https://giscus.app/client.js"
-        data-repo="michaelneuper/website"
-        data-repo-id="R_kgDOIjPNaQ"
-        data-category="General"
-        data-category-id="DIC_kwDOIjPNac4CaklA"
-        data-mapping="pathname"
-        data-strict="0"
-        data-reactions-enabled="1"
-        data-emit-metadata="0"
-        data-input-position="top"
-        data-theme="gruvbox"
-        data-lang="en"
-        data-loading="lazy"
-        crossorigin="anonymous"
-        async>
-  </script>
+<div id="cusdis_thread"
+  data-host="https://cusdis.com"
+  data-app-id="f939890a-dcf4-4428-b5c4-1cf423afaa55"
+  data-page-id="{{ .File.UniqueID }}"
+  data-page-url="{{ .Permalink }}"
+  data-page-title="{{ .Title }}"
+></div>
+<script async defer src="https://cusdis.com/js/cusdis.es.js"></script>
   """
 
   [params.buymeacoffee]
@@ -102,11 +94,11 @@ numberedSubtitles = true
   """
 
   [params.sharingbuttons]
-  facebook = true
-  twitter = true
-  email = true
-  linkedin = true
-  reddit = true
-  whatsapp = true
-  hackernews = true
-  telegram = true
+  facebook = false
+  twitter = false
+  email = false
+  linkedin = false
+  reddit = false
+  whatsapp = false
+  hackernews = false
+  telegram = false
