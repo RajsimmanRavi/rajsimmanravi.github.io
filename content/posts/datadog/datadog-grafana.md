@@ -47,7 +47,7 @@ For the usecase going forward for summaries, we'll use **am_request_count** metr
 
 The graph shown below is for the **Last 15 minutes** of the **Request Count** for **/healthz** endpoint. As you can see, the value is almost-flat at **55** - **56** req/sec.  An important note about a Grafana dashboard is that the smallest granularity (or shortest interval) between data points is **30** seconds if the time period (highlighted in yellow box on the first screenshot below) is small enough from  **Last 5 mins** till **Last 3 hours**. After that, it becomes 1 min, 2min, 4min etc. for longer time periods (**Last 6 hours, Last 12 hours,...**).
 
-![grafana_graph](post/datadog-grafana/grafanaGraph.png) 
+![grafana_graph](/post/datadog-grafana/grafanaGraph.png) 
 
 The Prometheus query is: `am_request_count:sum(endpoint=~"$endpoint")`. 
 

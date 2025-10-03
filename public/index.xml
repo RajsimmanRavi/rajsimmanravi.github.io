@@ -42,7 +42,7 @@
 &lt;p&gt;For the usecase going forward for summaries, we&amp;rsquo;ll use &lt;strong&gt;am_request_count&lt;/strong&gt; metric as example.&lt;/p&gt;
 &lt;h2 id=&#34;grafana-dashboard-for-request-count-for-healthz-endpoint&#34;&gt;Grafana Dashboard for Request Count for /healthz endpoint&lt;/h2&gt;
 &lt;p&gt;The graph shown below is for the &lt;strong&gt;Last 15 minutes&lt;/strong&gt; of the &lt;strong&gt;Request Count&lt;/strong&gt; for &lt;strong&gt;/healthz&lt;/strong&gt; endpoint. As you can see, the value is almost-flat at &lt;strong&gt;55&lt;/strong&gt; - &lt;strong&gt;56&lt;/strong&gt; req/sec.  An important note about a Grafana dashboard is that the smallest granularity (or shortest interval) between data points is &lt;strong&gt;30&lt;/strong&gt; seconds if the time period (highlighted in yellow box on the first screenshot below) is small enough from  &lt;strong&gt;Last 5 mins&lt;/strong&gt; till &lt;strong&gt;Last 3 hours&lt;/strong&gt;. After that, it becomes 1 min, 2min, 4min etc. for longer time periods (&lt;strong&gt;Last 6 hours, Last 12 hours,&amp;hellip;&lt;/strong&gt;).&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;post/datadog-grafana/grafanaGraph.png&#34; alt=&#34;grafana_graph&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://rajsimmanravi.github.io/post/datadog-grafana/grafanaGraph.png&#34; alt=&#34;grafana_graph&#34;&gt;&lt;/p&gt;
 &lt;p&gt;The Prometheus query is: &lt;code&gt;am_request_count:sum(endpoint=~&amp;quot;$endpoint&amp;quot;)&lt;/code&gt;.&lt;/p&gt;
 &lt;p&gt;&lt;img src=&#34;https://rajsimmanravi.github.io/post/datadog-grafana/prometheusGraph.png&#34; alt=&#34;Prometheus dashboard&#34;&gt;&lt;/p&gt;
 &lt;p&gt;From looking at the Prometheus dashboard above, we can confirm the value stays within 55-56.&lt;/p&gt;
@@ -234,7 +234,7 @@ background-color: #ffffff;&amp;#34;&amp;gt;All rights reserved.&amp;lt;/a&amp;gt
 &lt;h2 id=&#34;phishing-attack&#34;&gt;Phishing Attack&lt;/h2&gt;
 &lt;p&gt;I realized there were potentially 2 (common) ways to attacking this server: either through the &lt;strong&gt;ssh&lt;/strong&gt; open port &lt;strong&gt;22&lt;/strong&gt; or through the web application (hosted on port &lt;strong&gt;80&lt;/strong&gt;). Since there were a lot of activity with the web-server, I visited the domain of the website and checked for suspicious elements on the background.&lt;/p&gt;
 &lt;p&gt;Upon visiting the site’s main page &lt;a href=&#34;https://subdomain.website.ca&#34;&gt;https://subdomain.website.ca&lt;/a&gt; and when inspecting the elements on the HTML page of the site, I found a hidden javascript tag code:&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;post/cryptojacking-phishing-savi/suspicious_script.png&#34; alt=&#34;Suspicious Script&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://rajsimmanravi.github.io/post/crytojacking/suspicious_script.png&#34; alt=&#34;Suspicious Script&#34;&gt;&lt;/p&gt;
 &lt;p&gt;Just like any (in)sane person would do, I downloaded the file and took a look:&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-console&#34; data-lang=&#34;console&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;user@host:$  wget http://wt-23...full-http-control
 &lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;user@host:$ cat full-http-control

@@ -65,9 +65,17 @@ math = true
 enableDuckDuckGoSearchBox = false
 numberedSubtitles = true
 
-# Disable comment engine and buy me coffee widgets
-[params.commentEngine]
-code = ""
+  [params.commentEngine]
+  code = """
+<div id="cusdis_thread"
+  data-host="https://cusdis.com"
+  data-app-id="f939890a-dcf4-4428-b5c4-1cf423afaa55"
+  data-page-id="{{ .File.UniqueID }}"
+  data-page-url="{{ .Permalink }}"
+  data-page-title="{{ .Title }}"
+></div>
+<script async defer src="https://cusdis.com/js/cusdis.es.js"></script>
+  """
 
 [params.buymeacoffee]
 code = ""
@@ -109,11 +117,11 @@ code = ""
   # """
 
   [params.sharingbuttons]
-  facebook = true
-  twitter = true
-  email = true
-  linkedin = true
-  reddit = true
-  whatsapp = true
-  hackernews = true
-  telegram = true
+  facebook = false
+  twitter = false
+  email = false
+  linkedin = false
+  reddit = false
+  whatsapp = false
+  hackernews = false
+  telegram = false

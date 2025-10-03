@@ -219,7 +219,7 @@ I realized there were potentially 2 (common) ways to attacking this server: eith
 
 Upon visiting the site’s main page https://subdomain.website.ca and when inspecting the elements on the HTML page of the site, I found a hidden javascript tag code:
 
-![Suspicious Script](post/cryptojacking-phishing-savi/suspicious_script.png)
+![Suspicious Script](/post/crytojacking/suspicious_script.png)
 
 Just like any (in)sane person would do, I downloaded the file and took a look:
 
