@@ -63,7 +63,7 @@ toc = true
 rootFontSize = "105%"
 math = true
 enableDuckDuckGoSearchBox = false
-numberedSubtitles = true
+numberedSubtitles = false
 
   [params.commentEngine]
   code = """

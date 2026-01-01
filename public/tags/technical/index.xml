@@ -6,7 +6,57 @@
     <description>Recent content in Technical on R4J&#39;s Personal Site</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sat, 04 Jul 2020 12:45:43 -0500</lastBuildDate><atom:link href="https://rajsimmanravi.github.io/tags/technical/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Wed, 31 Dec 2025 07:40:00 -0500</lastBuildDate><atom:link href="https://rajsimmanravi.github.io/tags/technical/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Better Late Than Never: My First Open Source Contribution</title>
+      <link>https://rajsimmanravi.github.io/posts/ooni-first-pr/</link>
+      <pubDate>Wed, 31 Dec 2025 07:40:00 -0500</pubDate>
+      
+      <guid>https://rajsimmanravi.github.io/posts/ooni-first-pr/</guid>
+      <description>&lt;p&gt;I recently made my first open-source contribution by fixing a bug in the OONI Backend project. What started as browsing &amp;ldquo;good first issue&amp;rdquo; labels turned into an exciting journey through internet censorship detection, load balancing algorithms, and Docker debugging. With Claude Code as my pair programming partner, I navigated unfamiliar code and successfully submitted &lt;a href=&#34;https://github.com/ooni/backend/pull/1048&#34;&gt;PR #1048&lt;/a&gt;. Here&amp;rsquo;s how it went.&lt;/p&gt;
+&lt;h3 id=&#34;why-i-finally-decided-to-contribute&#34;&gt;Why I Finally Decided to Contribute&lt;/h3&gt;
+&lt;p&gt;Here’s my honest truth: I’ve been a software engineer for over five years, using numerous open-source tools daily, and I’ve never contributed back. Not once. I felt guilty about it, especially when I saw projects like ingress-nginx struggle to find maintainers and eventually get deprecated. I used that tool constantly, knew how valuable it was to the Kubernetes community, and yet I never helped.&lt;/p&gt;
+&lt;p&gt;I kept putting it off. Too intimidating. Too busy. Too many excuses.&lt;/p&gt;
+&lt;p&gt;However, I recently decided to take action. Turns out, there are lots of ways to contribute: starring projects ⭐️, sponsoring maintainers 🪙, or tackling a “good first issue” 🛠️. It doesn’t even have to be code; documentation improvements count too. I chose to dive into an actual issue, and honestly, it wasn’t as scary as I’d built it up to be in my head.&lt;/p&gt;
+&lt;p&gt;If you&amp;rsquo;re interested in contributing, &lt;a href=&#34;https://opensource.guide/how-to-contribute/&#34;&gt;this guide&lt;/a&gt; is a great starting point.&lt;/p&gt;
+&lt;h3 id=&#34;finding-the-right-project&#34;&gt;Finding the Right Project&lt;/h3&gt;
+&lt;p&gt;I started by looking for projects I actually cared about: privacy, security, tools that help with censorship, and protect journalists from digital threats. That led me to organizations like EFF (Electronic Frontier Foundation), Citizen Lab, and OONI.&lt;/p&gt;
+&lt;p&gt;OONI caught my attention because it’s written in Python, which is my forte. The project detects internet censorship worldwide; pretty cool stuff that actually matters. But when I opened the repository, I was immediately overwhelmed. The codebase felt massive, and I honestly thought about giving up more than a few times.&lt;/p&gt;
+&lt;p&gt;This is where Claude Code became invaluable. Instead of trying to understand every single line of code (which was paralyzing), I asked it to give me a structured plan. It helped me focus on just the parts I needed to understand for this specific issue: a high-level overview, not a deep dive into the entire codebase. That systematic approach made the intimidation manageable.&lt;/p&gt;
+&lt;h3 id=&#34;the-journey&#34;&gt;The Journey&lt;/h3&gt;
+&lt;p&gt;I found &lt;a href=&#34;https://github.com/ooni/backend/issues/973&#34;&gt;Issue #973&lt;/a&gt;: a failing test that seemed manageable. The test expected 4 test helper servers, but the function was returning 5. Simple enough, right?&lt;/p&gt;
+&lt;p&gt;Not quite. The codebase was unfamiliar, and the function involved load-balancing logic I didn’t immediately understand. This is where Claude Code became invaluable as a learning partner.&lt;/p&gt;
+&lt;h3 id=&#34;learning-through-questions&#34;&gt;Learning Through Questions&lt;/h3&gt;
+&lt;p&gt;Instead of diving into random files or trying to understand the entire codebase, I used Claude Code to guide my exploration through strategic questions:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;“Why is the IP address converted to a number?” Turns out it’s for deterministic distribution, so the same IP always gets the same helper server.&lt;/li&gt;
+&lt;li&gt;“Why modulo 100?” For clean percentage-based traffic distribution.&lt;/li&gt;
+&lt;li&gt;“Why the shift calculation?” For load balancing across servers.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Each answer built my mental model piece by piece. I wasn’t just fixing a bug blindly; I was understanding why the code worked the way it did.&lt;/p&gt;
+&lt;p&gt;Of course, the journey wasn’t without hiccups. When I tried to test locally, Docker builds failed due to a deprecated Debian repository. With Claude Code’s help in debugging the issue, I found and fixed the problem in the build script. Then I could finally run the tests and verify my fix worked. That moment when the tests passed? Pure satisfaction.&lt;/p&gt;
+&lt;h3 id=&#34;the-submission&#34;&gt;The Submission&lt;/h3&gt;
+&lt;p&gt;After ensuring all tests passed, I created a detailed commit message explaining not just what changed but why it changed. Then I submitted &lt;a href=&#34;https://github.com/ooni/backend/pull/1048&#34;&gt;PR #1048&lt;/a&gt; using the GitHub CLI.&lt;/p&gt;
+&lt;p&gt;The entire process (from finding the issue to submitting the PR) took one focused session. The fix itself? Just a few lines of code. But the learning journey made it worthwhile.&lt;/p&gt;
+&lt;h3 id=&#34;key-takeaways&#34;&gt;Key Takeaways&lt;/h3&gt;
+&lt;p&gt;You don’t need to know everything to contribute. I’d never seen the OONI codebase before, but by asking the right questions and following the code, I understood enough to fix the bug. That’s the beauty of “good first issues”: they’re truly beginner-friendly by design.&lt;/p&gt;
+&lt;p&gt;Testing locally builds confidence. Debugging the Docker build issue and verifying my fix worked gave me the confidence to submit. That “I want to be 100% sure this works” mindset paid off; no surprises for the maintainers.&lt;/p&gt;
+&lt;p&gt;Strategic learning beats comprehensive learning. I didn’t need to understand the entire codebase. With Claude Code’s help, I focused on just the parts relevant to my issue: load balancing logic, deterministic distribution, and how the test helpers worked. That targeted approach made the overwhelming feel manageable.&lt;/p&gt;
+&lt;h3 id=&#34;whats-next&#34;&gt;What’s Next?&lt;/h3&gt;
+&lt;p&gt;The PR has been created, and that initial step itself felt great. I finally did the thing I’d been putting off for 5 years.&lt;/p&gt;
+&lt;p&gt;I’ll be keeping a close eye on the PR review and fixing any issues before merging it. I’m also looking for the next issue to tackle, either in the same repository or another. The first contribution was the hardest: breaking through that initial intimidation barrier. Now that I know the process, I’m actually excited to do it again.&lt;/p&gt;
+&lt;p&gt;If you’ve been putting off your first contribution as I did, I’d say go for it. Find a project you care about, look for a “good first issue,” and just start. You might surprise yourself with what you can figure out.&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;Resources:&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Issue: &lt;a href=&#34;https://github.com/ooni/backend/issues/973&#34;&gt;https://github.com/ooni/backend/issues/973&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;PR: &lt;a href=&#34;https://github.com/ooni/backend/pull/1048&#34;&gt;https://github.com/ooni/backend/pull/1048&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;OONI Project: &lt;a href=&#34;https://ooni.org&#34;&gt;https://ooni.org&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;My Fork: &lt;a href=&#34;https://github.com/RajsimmanRavi/ooni-backend&#34;&gt;https://github.com/RajsimmanRavi/ooni-backend&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
+    
     <item>
       <title>Datadog vs Grafana Dashboards</title>
       <link>https://rajsimmanravi.github.io/posts/datadog/datadog-grafana/</link>
